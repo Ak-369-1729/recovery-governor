@@ -17,6 +17,7 @@ from app.api.routes_experiments import router as experiments_router
 from app.api.routes_chaos import router as chaos_router
 from app.api.routes_audit import router as audit_router
 from app.api.routes_demo import router as demo_router
+from app.api.routes_sandbox import router as sandbox_router
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -54,6 +55,7 @@ app.include_router(experiments_router)
 app.include_router(chaos_router)
 app.include_router(audit_router)
 app.include_router(demo_router)
+app.include_router(sandbox_router)
 
 # Health endpoints
 @app.get("/health")

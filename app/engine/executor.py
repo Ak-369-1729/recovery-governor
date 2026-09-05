@@ -4,7 +4,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 
 from app.config import settings
-from app.models.enums import ActionType, ExecutionStatus, DecisionOutcome
+from app.models.enums import ActionType, ExecutionStatus, DecisionOutcome, GovernorOperatingMode
 from app.models.schemas import GovernorDecision, ExecutionResult
 from app.models.repositories import insert_execution, get_execution_by_idempotency, utc_now_iso
 
@@ -28,6 +28,26 @@ class RecoveryActionExecutor:
         
         # Build strict idempotency key
         idempotency_key = f"idem_{payment_id}_{decision.event_id}"
+
+        # If operating in SHADOW mode, block execution and record hypothetical intention
+        if getattr(decision, "operating_mode", None) == GovernorOperatingMode.SHADOW or decision.decision_outcome == "SHADOW_APPROVED":
+            execution_id = f"exec_shd_{uuid.uuid4().hex[:12]}"
+            res = ExecutionResult(
+                execution_id=execution_id,
+                decision_id=decision_id,
+                payment_id=payment_id,
+                action=action,
+                adapter_type="SHADOW_MODE",
+                status=ExecutionStatus.SUPPRESSED,
+                response_payload={
+                    "message": "BLOCKED — SHADOW MODE: AI decision evaluated and approved by Governor, but execution withheld in Shadow Mode.",
+                    "hypothetical_action": action.value,
+                },
+                idempotency_key=idempotency_key,
+                timestamp=now_iso
+            )
+            insert_execution(res.model_dump())
+            return res
 
         # If decision is SUPPRESS, record suppressed execution
         if decision.decision == DecisionOutcome.SUPPRESS:

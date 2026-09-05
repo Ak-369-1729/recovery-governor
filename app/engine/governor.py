@@ -11,6 +11,7 @@ from app.models.enums import (
     AIMode,
     GateStatus,
     DecisionOutcome,
+    GovernorOperatingMode,
 )
 from app.models.schemas import (
     PolicyGateCheck,
@@ -20,6 +21,51 @@ from app.models.schemas import (
 )
 from app.engine.erv import ERVEngine
 from app.models.repositories import get_execution_by_idempotency, utc_now_iso
+
+class EmergencyKillSwitchManager:
+    """
+    Emergency Kill Switch: Global hardware-level circuit breaker.
+    When active, all automated recovery interventions are blocked and exposure prevented is tracked.
+    """
+    _is_active: bool = False
+    _activated_at: Optional[str] = None
+    _actions_blocked: int = 0
+    _potential_exposure_prevented: float = 0.0
+    _last_audit_id: Optional[str] = None
+
+    @classmethod
+    def is_active(cls) -> bool:
+        return cls._is_active
+
+    @classmethod
+    def activate(cls, audit_id: Optional[str] = None) -> None:
+        cls._is_active = True
+        cls._activated_at = utc_now_iso()
+        if audit_id:
+            cls._last_audit_id = audit_id
+
+    @classmethod
+    def reset(cls) -> None:
+        cls._is_active = False
+        cls._activated_at = None
+        cls._actions_blocked = 0
+        cls._potential_exposure_prevented = 0.0
+        cls._last_audit_id = None
+
+    @classmethod
+    def record_blocked(cls, amount: float) -> None:
+        cls._actions_blocked += 1
+        cls._potential_exposure_prevented += max(0.0, float(amount))
+
+    @classmethod
+    def get_status(cls) -> Dict[str, Any]:
+        return {
+            "is_active": cls._is_active,
+            "activated_at": cls._activated_at,
+            "actions_blocked": cls._actions_blocked,
+            "potential_exposure_prevented": round(cls._potential_exposure_prevented, 2),
+            "last_audit_id": cls._last_audit_id,
+        }
 
 class RecoveryGovernor:
     """
@@ -49,7 +95,8 @@ class RecoveryGovernor:
         event_id: str,
         ai_diagnosis: AIDiagnosisOutput,
         ai_mode: AIMode = AIMode.DETERMINISTIC_FALLBACK,
-        force_action: Optional[ActionType] = None
+        force_action: Optional[ActionType] = None,
+        operating_mode: GovernorOperatingMode = GovernorOperatingMode.GOVERNED,
     ) -> GovernorDecision:
         payment_id = payment["payment_id"]
         amount = float(payment["amount"])
@@ -66,6 +113,52 @@ class RecoveryGovernor:
         cooldown_minutes = policy.get("cooldown_minutes", self.cooldown_minutes)
         contact_cap = policy.get("customer_contact_cap", self.customer_contact_cap)
         hurdle = policy.get("economic_hurdle", self.economic_hurdle)
+
+        # --- PRE-GATE: GLOBAL EMERGENCY KILL SWITCH ---
+        if EmergencyKillSwitchManager.is_active():
+            EmergencyKillSwitchManager.record_blocked(amount)
+            now_iso = utc_now_iso()
+            decision_id = f"dec_{hashlib.sha256(f'{payment_id}_{now_iso}_{event_id}'.encode()).hexdigest()[:16]}"
+            kill_gate = PolicyGateCheck(
+                gate_name="GATE_0_EMERGENCY_KILL_SWITCH",
+                status=GateStatus.BLOCKED,
+                reason="EMERGENCY_STOP_ENGAGED: All automated payment recovery interventions are globally halted.",
+                details=EmergencyKillSwitchManager.get_status()
+            )
+            candidates_list = [force_action] if force_action else [p.action for p in ai_diagnosis.candidate_actions]
+            if ActionType.NO_ACTION not in candidates_list:
+                candidates_list.append(ActionType.NO_ACTION)
+            erv_map = {}
+            for act in candidates_list:
+                erv_map[act.value] = ERVEngine.calculate(
+                    action=act,
+                    payment_amount=amount,
+                    failure_type=failure_type,
+                    channel=channel,
+                    retry_count=retry_count,
+                    risk_tier=risk_tier,
+                    hurdle=hurdle
+                )
+            return GovernorDecision(
+                decision_id=decision_id,
+                payment_id=payment_id,
+                event_id=event_id,
+                ai_diagnosis=ai_diagnosis.diagnosis,
+                ai_confidence=ai_diagnosis.confidence,
+                ai_mode=ai_mode,
+                candidate_actions=candidates_list,
+                erv_by_action=erv_map,
+                policy_checks=[kill_gate],
+                blocked_actions=[a.value for a in candidates_list],
+                selected_action=ActionType.STOP,
+                decision=DecisionOutcome.STOP,
+                decision_outcome="EMERGENCY_STOP_BLOCKED",
+                operating_mode=operating_mode,
+                reason="All recovery actions halted by global Emergency Kill Switch.",
+                confidence=ai_diagnosis.confidence,
+                governor_version=self.version,
+                timestamp=now_iso
+            )
 
         # 1. Candidate Actions from AI + Fallback candidates
         if force_action:
@@ -312,6 +405,9 @@ class RecoveryGovernor:
         now_iso = utc_now_iso()
         decision_id = f"dec_{hashlib.sha256(f'{payment_id}_{now_iso}_{event_id}'.encode()).hexdigest()[:16]}"
         outcome_str = "APPROVED" if decision == DecisionOutcome.EXECUTE else decision.value
+        if operating_mode == GovernorOperatingMode.SHADOW and decision == DecisionOutcome.EXECUTE:
+            outcome_str = "SHADOW_APPROVED"
+            final_reason = f"SHADOW MODE: Action {selected_action.value} evaluated & approved by Governor gates, but execution withheld in Shadow observation mode."
 
         return GovernorDecision(
             decision_id=decision_id,
@@ -327,6 +423,7 @@ class RecoveryGovernor:
             selected_action=selected_action,
             decision=decision,
             decision_outcome=outcome_str,
+            operating_mode=operating_mode,
             reason=final_reason,
             confidence=ai_diagnosis.confidence,
             governor_version=self.version,

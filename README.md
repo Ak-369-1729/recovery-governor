@@ -159,7 +159,84 @@ The Chaos Lab tests the Governor under hostile and degraded operating conditions
 
 ---
 
-## 9. Quickstart & Installation
+## 9. Recovery Sandbox & Progressive Autonomy (Phase-2)
+
+The **Recovery Sandbox** extends Recovery Governor into an interactive proving ground where AI models, recovery policies, and chaos scenarios are rigorously evaluated under strict deterministic governance.
+
+```text
+                    RECOVERY GOVERNOR
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+       RECOVERY SANDBOX            EXISTING FLOWS
+              │                         │
+      ┌───────┼────────┐                │
+      │       │        │                │
+   Single  Portfolio  What-If           │
+   Event   Simulation                   │
+      │       │        │                │
+      └───────┼────────┘                │
+              ↓                         │
+       Strategy Arena                   │
+              ↓                         │
+       Chaos / Shadow                   │
+              ↓                         │
+      Readiness Evaluation              │
+              ↓                         │
+    Constrained Autonomy                │
+              │                         │
+              └──────────┬──────────────┘
+                         ↓
+                 DETERMINISTIC
+                    GOVERNOR
+                         ↓
+                     EXECUTOR
+                         ↓
+                    VERIFIER
+                         ↓
+                   ATTRIBUTION
+                         ↓
+                    LEARNING
+```
+
+### The Architectural Invariant
+```text
+AI
+ ↓
+Deterministic Recovery Governor
+ ↓
+Allowed Bounded Action
+ ↓
+Executor
+```
+> **Invariant**: AI proposes. Deterministic Governor decides. Direct financial execution by AI is permanently forbidden across all autonomy levels.
+
+### 5 Architectural Upgrades
+1. **Dynamic Action Catalog (Patch 1)**: What-If Simulator dynamically queries `ActionType` / `ACTION_CATALOG` to evaluate all candidate actions without hardcoded counts.
+2. **Recovery AI Readiness Score (Patch 2)**: A deterministic, mathematically reproducible 0–100 score across 5 core dimensions:
+   - **Safety Rate (30 pts)**: Zero tolerance for hard decline retries or card scheme rule violations.
+   - **Economic Efficiency (25 pts)**: Ratio of Net ERV to gross recovery, preventing fee burning.
+   - **Fallback Reliability (15 pts)**: Zero downtime under LLM failure; deterministic rules take over seamlessly.
+   - **Decision Accuracy & Calibration (15 pts)**: Brier calibration score between predicted probabilities and verified outcomes.
+   - **Verification & Attribution Quality (15 pts)**: Strict causal attribution; distinguishes natural settlement from interventions.
+3. **Constrained Autonomy (Patch 3)**:
+   - Autonomy progresses from `LEVEL_0_OBSERVE`, `LEVEL_1_RECOMMEND`, `LEVEL_2_SHADOW`, `LEVEL_3_GOVERNED_EXECUTION`, to `LEVEL_4_CONSTRAINED_AUTONOMOUS`.
+   - **Even at Level 4**, the AI remains bounded by the 8 deterministic safety gates. The Governor retains exclusive financial authority.
+4. **Single Event (Mode A) & Portfolio Simulation (Mode B) (Patch 4)**:
+   - **Mode A (Single Event)**: 10-step full forensic pipeline trace (Scenario → Diagnosis → Candidate Actions → What-If ERV → Governor Gates → Execution → Verification → Attribution → Bayesian Learning).
+   - **Mode B (Portfolio Simulation)**: Scalable multi-strategy tournament across synthetic populations (100, 1,000, 5,000, 10,000, 50,000) comparing `CONTROL`, `NAIVE_BASELINE`, `FIXED_DELAY_2H`, `ADAPTIVE`, and `GOVERNOR`. Fully reproducible using deterministic seeds.
+5. **Counterfactual Replay (Patch 5)**:
+   - Replays the actual executed strategy side-by-side with 3 simulated counterfactual trajectories:
+     - **Counterfactual A**: Control (Do Nothing — measure baseline natural recovery without merchant cost)
+     - **Counterfactual B**: Naive Baseline (Immediate blind retry — exposes burnt fees & regulatory violations)
+     - **Counterfactual C**: Alternative Governor Policy (e.g. 2-Hour window or Payment Link)
+   - Every counterfactual is explicitly labeled with **`SIMULATED COUNTERFACTUAL`** to preserve causal integrity.
+6. **Emergency Global Kill Switch (Gate 0)**:
+   - Instantaneous global thread-safe circuit breaker. When tripped, Gate 0 intercepts 100% of candidate actions, halts financial execution, and logs exposure prevented to the SHA-256 audit ledger.
+
+---
+
+## 10. Quickstart & Installation
 
 ### Prerequisites
 - Python 3.10+ (Tested on Python 3.14)
@@ -184,11 +261,11 @@ The database initializes automatically with SQLite in WAL mode and populates the
 ```bash
 python -m pytest tests/ -v
 ```
-All 19 tests validate the Governor gates, ERV engine, Bayesian learner, and chaos scenarios.
+All 29 tests validate the Governor gates, ERV engine, Bayesian learner, chaos scenarios, and all 5 Phase-2 upgrades (What-If, Readiness, Constrained Autonomy, Portfolio Simulation, Counterfactual Replay).
 
 ---
 
-## 10. AI & Razorpay Configuration
+## 11. AI & Razorpay Configuration
 
 The application runs completely out-of-the-box in **Deterministic Fallback + Simulation Mode** with zero external credentials required.
 
@@ -207,7 +284,7 @@ RAZORPAY_KEY_SECRET=...
 
 ---
 
-## 11. Project Structure
+## 12. Project Structure
 
 ```text
 recovery-governor/
@@ -224,10 +301,11 @@ recovery-governor/
 │   │   ├── routes_experiments.py# 4-Arm strategy experiment
 │   │   ├── routes_chaos.py      # 5 Chaos scenario runners
 │   │   ├── routes_audit.py      # Cryptographic audit logs and verification
-│   │   └── routes_demo.py       # 2-minute live demo orchestration
+│   │   ├── routes_demo.py       # 2-minute live demo orchestration
+│   │   └── routes_sandbox.py    # Sandbox, What-If, Arena, Readiness, Kill-Switch APIs
 │   │
 │   ├── engine/                  # Core Algorithmic Engines
-│   │   ├── governor.py          # Deterministic Recovery Governor (8 Gates)
+│   │   ├── governor.py          # Deterministic Recovery Governor (8 Gates + Kill Switch)
 │   │   ├── erv.py               # Expected Recovery Value (ERV) Engine
 │   │   ├── bayesian.py          # Conjugate Beta-Binomial Bayesian Model
 │   │   ├── diagnosis.py         # Gemini AI Diagnosis Engine
@@ -239,11 +317,12 @@ recovery-governor/
 │   │   ├── benchmark.py         # Control / Baseline / Governor benchmark
 │   │   ├── experiments.py       # A/B/n strategy testing
 │   │   ├── chaos.py             # Resilience chaos laboratory
-│   │   └── replay.py            # Chronological decision replay pipeline
+│   │   ├── replay.py            # Chronological decision replay pipeline
+│   │   └── sandbox.py           # Phase-2 What-If, Arena, Readiness, Autonomy Engine
 │   │
 │   ├── models/                  # Data Architecture
 │   │   ├── database.py          # SQLite WAL mode initialization
-│   │   ├── enums.py             # Failure taxonomy and action catalog
+│   │   ├── enums.py             # Failure taxonomy, action catalog & autonomy levels
 │   │   ├── schemas.py           # Strict Pydantic v2 schemas
 │   │   └── repositories.py      # Data access layer & SHA-256 audit chaining
 │   │
@@ -258,9 +337,10 @@ recovery-governor/
 │           ├── benchmark.js
 │           ├── experiments.js
 │           ├── chaos.js
-│           └── audit.js
+│           ├── audit.js
+│           └── sandbox.js       # Phase-2 Recovery Sandbox view controller
 │
-├── tests/                       # Automated Test Suite (19 test cases)
+├── tests/                       # Automated Test Suite (29 test cases)
 ├── requirements.txt
 ├── .env.example
 ├── .gitignore
@@ -274,7 +354,7 @@ recovery-governor/
 
 ---
 
-## 12. Known Limitations & Roadmap
+## 13. Known Limitations & Roadmap
 
 ### Limitations
 1. **Network settlement delay**: In production, banking clearing cycles (NACH/e-Mandate) take up to 24-48 hours. In the prototype, these settlement windows are simulated or accelerated.
@@ -288,6 +368,6 @@ recovery-governor/
 
 ---
 
-## 13. License
+## 14. License
 Independent Prototype built for the **Razorpay AI Buildathon 2026 Track 03: AI Revenue Recovery**.
 Not an official Razorpay product. Released under the Apache 2.0 License.

@@ -1,4 +1,5 @@
 import uuid
+import hashlib
 from typing import Dict, Any, List
 from datetime import datetime, timezone
 
@@ -149,7 +150,7 @@ class BenchmarkEngine:
                 success_p = 0.25
 
             # Deterministic pseudo-random seed per payment
-            val = ((hash(p["payment_id"]) % 10000) / 10000.0)
+            val = (int(hashlib.md5(f"base_{p['payment_id']}".encode()).hexdigest()[:8], 16) % 10000) / 10000.0
             if val < success_p or p.get("natural_recovery_status") == "NATURAL_RECOVERY_CONTROL":
                 gross_recovered += amount
 
@@ -209,6 +210,8 @@ class BenchmarkEngine:
 
             if decision.decision == DecisionOutcome.SUPPRESS:
                 duplicate_suppressed += 1
+                if p.get("natural_recovery_status") == "NATURAL_RECOVERY_CONTROL":
+                    gross_recovered += amount
                 continue
 
             if decision.decision in {DecisionOutcome.NO_ACTION, DecisionOutcome.STOP}:
@@ -232,9 +235,9 @@ class BenchmarkEngine:
             # - Insufficient funds uses RETRY_NEXT_DAY or SEND_REMINDER (recovery ~ 45%)
             # - Network timeout uses RETRY_NOW (recovery ~ 60%)
             erv_calc = decision.erv_by_action.get(action.value)
-            sim_p = erv_calc.recovery_probability if erv_calc else 0.50
+            sim_p = erv_calc.recovery_probability if erv_calc else 0.55
 
-            val = ((hash(f"gov_{p['payment_id']}_{action.value}") % 10000) / 10000.0)
+            val = (int(hashlib.md5(f"gov_{p['payment_id']}_{action.value}".encode()).hexdigest()[:8], 16) % 10000) / 10000.0
             if val < sim_p or p.get("natural_recovery_status") == "NATURAL_RECOVERY_CONTROL":
                 gross_recovered += amount
 

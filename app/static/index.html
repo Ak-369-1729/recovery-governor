@@ -22,10 +22,11 @@
 
       <ul class="nav-menu" id="nav-menu">
         <li><a href="#overview" class="nav-item active" data-view="overview" id="nav-overview"><span class="nav-icon">📊</span> Overview</a></li>
+        <li><a href="#sandbox" class="nav-item" data-view="sandbox" id="nav-sandbox"><span class="nav-icon">🧪</span> Recovery Sandbox</a></li>
         <li><a href="#queue" class="nav-item" data-view="queue" id="nav-queue"><span class="nav-icon">⚡</span> Recovery Queue</a></li>
         <li><a href="#replay" class="nav-item" data-view="replay" id="nav-replay"><span class="nav-icon">🔍</span> Decision Replay</a></li>
         <li><a href="#benchmark" class="nav-item" data-view="benchmark" id="nav-benchmark"><span class="nav-icon">🎯</span> Benchmark</a></li>
-        <li><a href="#experiments" class="nav-item" data-view="experiments" id="nav-experiments"><span class="nav-icon">🧪</span> Experiments</a></li>
+        <li><a href="#experiments" class="nav-item" data-view="experiments" id="nav-experiments"><span class="nav-icon">📈</span> Experiments</a></li>
         <li><a href="#chaos" class="nav-item" data-view="chaos" id="nav-chaos"><span class="nav-icon">🔥</span> Chaos Lab</a></li>
         <li><a href="#audit" class="nav-item" data-view="audit" id="nav-audit"><span class="nav-icon">🛡️</span> Audit Trail</a></li>
         <li><a href="#demo" class="nav-item" data-view="demo" id="nav-demo"><span class="nav-icon">🎬</span> Live Demo</a></li>
@@ -48,12 +49,16 @@
           <h1 class="page-title" id="current-page-title">Overview</h1>
           <span class="page-badge" id="current-page-subtitle">Real-Time Financial Recovery Analytics</span>
         </div>
-        <div class="top-bar-actions">
+        <div class="top-bar-actions" style="display: flex; align-items: center; gap: 12px;">
+          <!-- Global Emergency Stop Button -->
+          <button class="btn btn-sm btn-kill-switch" id="btn-kill-switch" title="Hardware-Level Emergency Stop Circuit Breaker">
+            <span id="kill-switch-icon">🛡️</span> <span id="kill-switch-label">EMERGENCY STOP: READY</span>
+          </button>
           <button class="btn btn-secondary btn-sm" id="btn-refresh-data" title="Refresh data">
             <span>🔄 Refresh</span>
           </button>
-          <a href="#demo" class="btn btn-primary btn-sm" id="btn-top-run-demo">
-            <span>▶ Run Live Demo</span>
+          <a href="#sandbox" class="btn btn-primary btn-sm" id="btn-top-run-sandbox">
+            <span>⚡ Recovery Sandbox</span>
           </a>
         </div>
       </header>
@@ -155,6 +160,339 @@
                   <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading Bayesian parameters...</td></tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- VIEW: RECOVERY SANDBOX & WHAT-IF SIMULATOR -->
+        <!-- ============================================================= -->
+        <section id="view-sandbox" class="view-section" style="display: none;">
+          <!-- 10-Step "Prove Before Deploy" Workflow Banner -->
+          <div class="workflow-steps-bar">
+            <div class="workflow-step completed"><span>1. Scenario</span></div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step completed"><span>2. Simulate</span></div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step completed"><span>3. What-If</span></div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step completed"><span>4. Chaos</span></div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step completed"><span>5. Shadow</span></div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step completed"><span>6. Readiness</span></div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step active"><span>7. Governor Authority</span></div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step"><span>8. Execute</span></div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step"><span>9. Verify</span></div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step"><span>10. Learn</span></div>
+          </div>
+
+          <!-- Top Control Header & Mode Switcher -->
+          <div class="card" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <div class="card-title">Recovery Sandbox & What-If Simulator</div>
+              <div class="card-subtitle">Synthesize scenarios, model ERV trade-offs, stress-test AI behavior, and govern execution</div>
+            </div>
+            <div class="mode-switch-group">
+              <button class="mode-switch-btn active" id="btn-mode-single">Mode A: Single Event</button>
+              <button class="mode-switch-btn" id="btn-mode-portfolio">Mode B: Portfolio Simulation</button>
+            </div>
+          </div>
+
+          <!-- ========================================================= -->
+          <!-- MODE A: SINGLE EVENT SIMULATION -->
+          <!-- ========================================================= -->
+          <div id="sandbox-single-container">
+            <!-- Preset Scenario Chips -->
+            <div class="card" style="margin-bottom: 20px; padding: 16px 20px;">
+              <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 10px;">
+                Instant Scenario Presets (Judge Evaluation Benchmarks)
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                <button class="btn btn-secondary btn-sm btn-preset-chip active" data-preset="scenario_a" id="preset-a">
+                  <span>Scenario A: Recoverable Issuer Timeout (₹4,999 UPI)</span>
+                </button>
+                <button class="btn btn-secondary btn-sm btn-preset-chip" data-preset="scenario_b" id="preset-b">
+                  <span>Scenario B: Permanent Decline (Mandate Revoked)</span>
+                </button>
+                <button class="btn btn-secondary btn-sm btn-preset-chip" data-preset="scenario_c" id="preset-c">
+                  <span>Scenario C: Negative Economics (₹49 Low Ticket)</span>
+                </button>
+                <button class="btn btn-secondary btn-sm btn-preset-chip" data-preset="scenario_d" id="preset-d">
+                  <span>Scenario D: Retry Storm (Caps Exhausted)</span>
+                </button>
+                <button class="btn btn-secondary btn-sm btn-preset-chip" data-preset="scenario_e" id="preset-e">
+                  <span>Scenario E: High-Value Customer (₹45,000 Corporate)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Interactive Scenario Form -->
+            <div class="card" style="margin-bottom: 24px;">
+              <div class="card-title" style="margin-bottom: 16px;">Synthetic Failed-Payment Parameters & Governance Context</div>
+              
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                <!-- Payment Parameters -->
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">AMOUNT (INR)</label>
+                  <input type="number" id="sbx-amount" value="4999" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">PAYMENT METHOD</label>
+                  <select id="sbx-method" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                    <option value="UPI">UPI</option>
+                    <option value="CARD">CARD</option>
+                    <option value="MANDATE">MANDATE</option>
+                    <option value="NETBANKING">NETBANKING</option>
+                    <option value="WALLET">WALLET</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">FAILURE TYPE</label>
+                  <select id="sbx-failure-type" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                    <option value="TEMPORARY_ISSUER_FAILURE">TEMPORARY_ISSUER_FAILURE</option>
+                    <option value="NETWORK_TIMEOUT">NETWORK_TIMEOUT</option>
+                    <option value="INSUFFICIENT_FUNDS">INSUFFICIENT_FUNDS</option>
+                    <option value="CARD_EXPIRED">CARD_EXPIRED</option>
+                    <option value="MANDATE_REVOKED">MANDATE_REVOKED (Hard Decline)</option>
+                    <option value="CARD_LOST_STOLEN">CARD_LOST_STOLEN (Hard Decline)</option>
+                    <option value="ACCOUNT_CLOSED">ACCOUNT_CLOSED (Hard Decline)</option>
+                    <option value="AUTHENTICATION_REQUIRED">AUTHENTICATION_REQUIRED</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">FAILURE CODE</label>
+                  <input type="text" id="sbx-failure-code" value="ISSUER_504_TIMEOUT" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">RETRY COUNT</label>
+                  <input type="number" id="sbx-retry-count" value="0" min="0" max="10" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                <!-- Context & Policy -->
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">CUSTOMER LTV (INR)</label>
+                  <input type="number" id="sbx-customer-ltv" value="15000" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">CONTACT ATTEMPTS (24H)</label>
+                  <input type="number" id="sbx-contact-count" value="0" min="0" max="5" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">RISK TIER</label>
+                  <select id="sbx-risk-tier" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                    <option value="LOW">LOW</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                    <option value="HIGH">HIGH</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">CHANNEL</label>
+                  <select id="sbx-channel" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                    <option value="MOBILE_APP">MOBILE_APP</option>
+                    <option value="WEB_CHECKOUT">WEB_CHECKOUT</option>
+                    <option value="RECURRING_SUBSCRIPTION">RECURRING_SUBSCRIPTION</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">GOVERNOR OPERATING MODE</label>
+                  <select id="sbx-operating-mode" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary); font-weight: 700;">
+                    <option value="GOVERNED">GOVERNED (Authority to execute)</option>
+                    <option value="SHADOW">SHADOW (Decisions measured, execution blocked)</option>
+                    <option value="SIMULATION">SIMULATION (Isolated simulated execution)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">CHAOS INJECTION</label>
+                  <select id="sbx-chaos-injection" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                    <option value="">None (Nominal Execution)</option>
+                    <option value="GEMINI_OUTAGE">Gemini 503 Outage (Fallback Test)</option>
+                    <option value="MALFORMED_AI_RESPONSE">Malformed AI Response (Schema Failover)</option>
+                    <option value="PROHIBITED_RETRY">Rogue AI Overreach (Gate 1 Interception)</option>
+                    <option value="RETRY_STORM">Retry Storm Spike (Gate 2/3 Cap Test)</option>
+                    <option value="WEBHOOK_REPLAY_STORM">Webhook Replay Storm (Gate 6 Idempotency)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">ECONOMIC HURDLE (INR)</label>
+                  <input type="number" id="sbx-hurdle" value="10.0" step="1.0" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: flex-end;">
+                <button class="btn btn-primary" id="btn-run-sandbox-scenario" style="padding: 10px 24px; font-size: 0.95rem; font-weight: 700;">
+                  ⚡ RUN THROUGH GOVERNOR
+                </button>
+              </div>
+            </div>
+
+            <!-- AI vs Governor Visual Card -->
+            <div id="sbx-ai-gov-card" class="ai-gov-visual-card">
+              <!-- Rendered dynamically by sandbox.js -->
+              <div style="text-align: center; color: var(--text-muted); grid-column: 1 / -1; padding: 24px;">
+                Execute scenario to view interactive AI vs Governor decision authority comparison.
+              </div>
+            </div>
+
+            <!-- Dynamic What-If Matrix Card -->
+            <div class="card" style="margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div>
+                  <div class="card-title">What-If Action Simulator</div>
+                  <div class="card-subtitle">Comprehensive Net ERV breakdown across all candidate actions in Action Catalog</div>
+                </div>
+                <span id="whatif-action-count-badge" class="badge badge-purple">Candidate Actions</span>
+              </div>
+              <div class="table-container">
+                <table id="table-whatif-matrix">
+                  <thead>
+                    <tr>
+                      <th>Candidate Action</th>
+                      <th>Recovery Prob P(R)</th>
+                      <th>Gross Recovery</th>
+                      <th>Intervention Fee</th>
+                      <th>Friction & Risk Cost</th>
+                      <th>Expected Net ERV</th>
+                      <th>Governor Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-whatif-matrix">
+                    <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading What-If comparisons...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Forensic 10-Stage Execution Trace & Counterfactual Replay -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+              <div class="card">
+                <div class="card-title" style="margin-bottom: 16px;">Forensic Execution Trace</div>
+                <div id="sbx-trace-timeline">
+                  <!-- Injected dynamically -->
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-title" style="margin-bottom: 16px;">Counterfactual Replay Comparison</div>
+                <div class="card-subtitle" style="margin-bottom: 16px;">Compares actual execution against simulated counterfactual paths</div>
+                <div id="sbx-counterfactual-grid" style="display: flex; flex-direction: column; gap: 12px;">
+                  <!-- Injected dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ========================================================= -->
+          <!-- MODE B: PORTFOLIO SIMULATION & STRATEGY ARENA -->
+          <!-- ========================================================= -->
+          <div id="sandbox-portfolio-container" style="display: none;">
+            <!-- Controls Card -->
+            <div class="card" style="margin-bottom: 24px;">
+              <div class="card-title" style="margin-bottom: 16px;">Portfolio Simulation & "What If I Change This?" Policy Experiments</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">POPULATION SIZE (N)</label>
+                  <select id="port-pop-size" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                    <option value="100">100 Transactions</option>
+                    <option value="500" selected>500 Transactions</option>
+                    <option value="1000">1,000 Transactions</option>
+                    <option value="5000">5,000 Transactions</option>
+                    <option value="10000">10,000 Transactions</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">RANDOM SEED (REPRODUCIBILITY)</label>
+                  <input type="number" id="port-seed" value="42" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">MINIMUM ERV HURDLE (INR)</label>
+                  <input type="number" id="port-hurdle" value="10.0" step="1.0" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">MAX RETRIES PER PAYMENT</label>
+                  <input type="number" id="port-retries" value="3" min="1" max="6" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn btn-secondary" id="btn-run-sensitivity-analysis">
+                  ⚡ Run 5-Seed Sensitivity Sweep
+                </button>
+                <button class="btn btn-primary" id="btn-run-portfolio-sim">
+                  ▶ RUN PORTFOLIO TOURNAMENT
+                </button>
+              </div>
+
+              <div id="sensitivity-results-container"></div>
+            </div>
+
+            <!-- Strategy Tournament Cards Grid -->
+            <div class="grid-metrics" id="port-cards-grid" style="margin-bottom: 24px;">
+              <!-- Populated dynamically -->
+            </div>
+
+            <!-- Tournament Deep Table -->
+            <div class="card" style="margin-bottom: 24px;">
+              <div class="card-title" style="margin-bottom: 16px;">Strategy Arena Comparative Tournament Summary</div>
+              <div class="table-container">
+                <table id="table-portfolio-summary">
+                  <thead>
+                    <tr>
+                      <th>Strategy</th>
+                      <th>Population Size</th>
+                      <th>Failed Volume</th>
+                      <th>Gross Recovered</th>
+                      <th>Recovery Rate</th>
+                      <th>Total Fees & Costs</th>
+                      <th>Net Recovered Value</th>
+                      <th>Unsafe Blocked</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-port-table">
+                    <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Loading portfolio tournament...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ========================================================= -->
+          <!-- RECOVERY AI READINESS SCORE & PROGRESSIVE AUTONOMY GATE -->
+          <!-- ========================================================= -->
+          <div class="card" style="margin-top: 24px; border-top: 4px solid var(--accent-blue);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+              <div>
+                <div class="card-title">Recovery AI Readiness & Progressive Autonomy Gate</div>
+                <div class="card-subtitle">Deterministic 5-dimension evaluation bounding permissible AI autonomy</div>
+              </div>
+              <span id="autonomy-level-badge" class="badge badge-purple" style="font-size: 0.85rem; padding: 6px 14px;">LEVEL 2 — SHADOW</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
+              <!-- Total Scorecard -->
+              <div style="background: var(--bg-primary); border-radius: var(--radius-md); padding: 20px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Recovery AI Readiness Score</div>
+                <div class="readiness-score-display" style="margin: 12px 0;">
+                  <span class="readiness-score-number" id="readiness-total-score">92.7</span>
+                  <span style="font-size: 1.1rem; color: var(--text-muted); font-weight: 700;">/ 100</span>
+                </div>
+                <span class="badge badge-success" style="font-size: 0.75rem;">HIGH RELIABILITY • ELIGIBLE FOR GOVERNED DEPLOYMENT</span>
+              </div>
+
+              <!-- 5 Dimension Breakdown -->
+              <div id="readiness-dimensions-container" style="display: flex; flex-direction: column; justify-content: center;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <div style="margin-top: 18px; padding: 12px 16px; background: rgba(12, 108, 242, 0.08); border-left: 4px solid var(--accent-blue); border-radius: 4px; font-size: 0.8rem; color: #93c5fd;" id="autonomy-invariant-notice">
+              ARCHITECTURAL INVARIANT: AI proposes. Deterministic Governor decides. Direct financial execution by AI is permanently prohibited at all autonomy levels.
             </div>
           </div>
         </section>
@@ -484,5 +822,6 @@
   <script src="/static/js/experiments.js"></script>
   <script src="/static/js/chaos.js"></script>
   <script src="/static/js/audit.js"></script>
+  <script src="/static/js/sandbox.js"></script>
 </body>
 </html>

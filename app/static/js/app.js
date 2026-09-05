@@ -67,6 +67,7 @@ function switchView(viewName) {
   // Update Top Bar titles
   const titles = {
     overview: ["Overview", "Real-Time Financial Recovery Analytics"],
+    sandbox: ["Recovery Sandbox", "Interactive What-If Simulation, Strategy Arena & Governed Execution"],
     queue: ["Recovery Queue", "Live Stream of Failed Payments & Policy Actions"],
     replay: ["Decision Replay", "Step-by-Step Chronological Audit & Causal Trace"],
     benchmark: ["Three-Way Benchmark", "Control vs Naive Baseline vs Recovery Governor"],
@@ -83,6 +84,7 @@ function switchView(viewName) {
 
   // Trigger view-specific data loads
   if (viewName === "overview" && window.DashboardView) window.DashboardView.load();
+  if (viewName === "sandbox" && window.SandboxView) window.SandboxView.init();
   if (viewName === "queue" && window.PaymentsView) window.PaymentsView.load();
   if (viewName === "benchmark" && window.BenchmarkView) window.BenchmarkView.load();
   if (viewName === "experiments" && window.ExperimentsView) window.ExperimentsView.load();
@@ -124,6 +126,11 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("modal-trace").addEventListener("click", (e) => {
     if (e.target.id === "modal-trace") closeDecisionTraceModal();
   });
+
+  // Check Emergency Kill Switch state
+  if (window.SandboxView) {
+    window.SandboxView.checkKillSwitch();
+  }
 
   // Fetch health check for AI status
   API.get("/health")
