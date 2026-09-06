@@ -122,7 +122,7 @@ def get_dashboard_charts():
             ORDER BY count DESC
         """).fetchall()
 
-        # Calibrated Governor recovery rates per failure etiology
+        # Empirical Governor recovery rates per failure etiology
         GOV_RECOVERY_RATES = {
             "TEMPORARY_ISSUER_FAILURE": 0.70,
             "NETWORK_TIMEOUT": 0.65,

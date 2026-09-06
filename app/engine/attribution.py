@@ -90,3 +90,91 @@ class RecoveryAttributionEngine:
         )
         insert_attribution(res.model_dump())
         return res
+
+    @classmethod
+    def attribute_prevention(
+        cls,
+        prevention_decision: Any,
+        payment: Dict[str, Any],
+        final_outcome: str,
+        counterfactual_outcome: Optional[str] = None,
+    ) -> AttributionResult:
+        """
+        Conservative Prevention Attribution:
+        Only credits PREVENTED_FAILURE when simulation evidence confirms counterfactual failure.
+        Otherwise classifies as NATURAL_SUCCESS, FAILED_PREVENTION, or UNKNOWN_PREVENTION.
+        """
+        attribution_id = f"attr_prev_{uuid.uuid4().hex[:12]}"
+        now_iso = utc_now_iso()
+        payment_id = payment.get("payment_id", "pay_unknown")
+        amount = float(payment.get("amount", 0.0))
+        action = prevention_decision.selected_action
+        
+        meta = ACTION_CATALOG.get(action, {
+            "intervention_cost": 0.0,
+            "risk_cost": 0.0,
+            "friction_cost": 0.0,
+        })
+        intervention_cost = float(meta["intervention_cost"])
+        risk_cost = float(meta["risk_cost"])
+        friction_cost = float(meta["friction_cost"])
+        cost_breakdown = {
+            "intervention_cost": intervention_cost,
+            "risk_cost": risk_cost,
+            "friction_cost": friction_cost,
+            "total_cost": intervention_cost + risk_cost + friction_cost,
+        }
+
+        if action == ActionType.NO_ACTION:
+            if final_outcome == "SUCCESS":
+                category = AttributionCategory.NATURAL_SUCCESS
+                recovered = 0.0
+                net_val = 0.0
+                method = "NATURAL_SUCCESS_WITHOUT_INTERVENTION"
+            else:
+                category = AttributionCategory.UNKNOWN_PREVENTION
+                recovered = 0.0
+                net_val = 0.0
+                method = "NON_INTERVENED_FAILURE"
+        else:
+            # Active preventive action was executed
+            if final_outcome == "FAILED":
+                category = AttributionCategory.FAILED_PREVENTION
+                recovered = 0.0
+                net_val = -cost_breakdown["total_cost"]
+                method = "PREVENTIVE_INTERVENTION_FAILED"
+            elif final_outcome == "SUCCESS":
+                if counterfactual_outcome == "FAILED":
+                    category = AttributionCategory.PREVENTED_FAILURE
+                    recovered = amount
+                    net_val = amount - cost_breakdown["total_cost"]
+                    method = "COUNTERFACTUAL_CONFIRMED_PREVENTED_FAILURE"
+                elif counterfactual_outcome == "SUCCESS":
+                    category = AttributionCategory.NATURAL_SUCCESS
+                    recovered = 0.0
+                    net_val = -cost_breakdown["total_cost"]
+                    method = "UNNECESSARY_INTERVENTION_NATURAL_SUCCESS"
+                else:
+                    category = AttributionCategory.UNKNOWN_PREVENTION
+                    recovered = 0.0
+                    net_val = -cost_breakdown["total_cost"]
+                    method = "AMBIGUOUS_CAUSAL_PREVENTION"
+            else:
+                category = AttributionCategory.UNKNOWN_PREVENTION
+                recovered = 0.0
+                net_val = 0.0
+                method = "UNVERIFIED_OUTCOME"
+
+        res = AttributionResult(
+            attribution_id=attribution_id,
+            payment_id=payment_id,
+            category=category,
+            counterfactual_method=method,
+            recovered_amount=round(recovered, 2),
+            net_recovered_value=round(net_val, 2),
+            cost_breakdown=cost_breakdown,
+            timestamp=now_iso,
+        )
+        insert_attribution(res.model_dump())
+        return res
+

@@ -67,6 +67,7 @@ function switchView(viewName) {
   // Update Top Bar titles
   const titles = {
     overview: ["Overview", "Real-Time Financial Recovery Analytics"],
+    intelligence: ["Payment Intelligence", "Predict → Prevent → Recover → Prove Architecture"],
     sandbox: ["Recovery Sandbox", "Interactive What-If Simulation, Strategy Arena & Governed Execution"],
     queue: ["Recovery Queue", "Live Stream of Failed Payments & Policy Actions"],
     replay: ["Decision Replay", "Step-by-Step Chronological Audit & Causal Trace"],
@@ -84,6 +85,7 @@ function switchView(viewName) {
 
   // Trigger view-specific data loads
   if (viewName === "overview" && window.DashboardView) window.DashboardView.load();
+  if (viewName === "intelligence" && window.IntelligenceView) window.IntelligenceView.init();
   if (viewName === "sandbox" && window.SandboxView) window.SandboxView.init();
   if (viewName === "queue" && window.PaymentsView) window.PaymentsView.load();
   if (viewName === "benchmark" && window.BenchmarkView) window.BenchmarkView.load();

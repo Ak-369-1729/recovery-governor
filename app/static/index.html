@@ -22,6 +22,7 @@
 
       <ul class="nav-menu" id="nav-menu">
         <li><a href="#overview" class="nav-item active" data-view="overview" id="nav-overview"><span class="nav-icon">📊</span> Overview</a></li>
+        <li><a href="#intelligence" class="nav-item" data-view="intelligence" id="nav-intelligence"><span class="nav-icon">🧠</span> Payment Intelligence</a></li>
         <li><a href="#sandbox" class="nav-item" data-view="sandbox" id="nav-sandbox"><span class="nav-icon">🧪</span> Recovery Sandbox</a></li>
         <li><a href="#queue" class="nav-item" data-view="queue" id="nav-queue"><span class="nav-icon">⚡</span> Recovery Queue</a></li>
         <li><a href="#replay" class="nav-item" data-view="replay" id="nav-replay"><span class="nav-icon">🔍</span> Decision Replay</a></li>
@@ -158,6 +159,353 @@
                 </thead>
                 <tbody id="tbody-bayesian-models">
                   <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading Bayesian parameters...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- VIEW: PAYMENT INTELLIGENCE (PREDICT -> PREVENT -> RECOVER -> PROVE) -->
+        <!-- ============================================================= -->
+        <section id="view-intelligence" class="view-section" style="display: none;">
+          <!-- 4-Phase Architecture Banner -->
+          <div class="workflow-steps-bar" style="margin-bottom: 20px;">
+            <div class="workflow-step completed"><span>1. Predict (Pre-Flight Risk)</span></div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step completed"><span>2. Prevent (Deterministic Governor)</span></div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step completed"><span>3. Recover (Reactive Fallback)</span></div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step active"><span>4. Prove (Attribution & Brier Reliability)</span></div>
+          </div>
+
+          <!-- Top Simulation & Scenario Controls -->
+          <div class="card" style="margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <div class="card-title">Pre-Flight Payment Intelligence & Lifecycle Simulator</div>
+                <div class="card-subtitle">Evaluate risk, test preventive intervention gates, observe network degradation, and verify prediction error</div>
+              </div>
+              <span class="badge badge-purple" style="font-weight: 700;">Deterministic Simulation Engine</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 16px;">
+              <div>
+                <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Payment Amount (INR)</label>
+                <input type="number" id="intel-amount-input" value="49999" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+              </div>
+              <div>
+                <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Payment Method</label>
+                <select id="intel-method-select" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                  <option value="UPI" selected>UPI (Unified Payments Interface)</option>
+                  <option value="CARD">CARD (Visa / Mastercard / RuPay)</option>
+                  <option value="NETBANKING">NETBANKING (Core Banking)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Simulated Network Scenario</label>
+                <select id="intel-scenario-select" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                  <option value="SBI_DEGRADED" selected>SBI_DEGRADED (43% Health Scenario)</option>
+                  <option value="NORMAL">NORMAL (Optimal Health across Rails)</option>
+                  <option value="ICICI_DEGRADED">ICICI_DEGRADED (Transient Lag)</option>
+                  <option value="MULTI_RAIL_DEGRADATION">MULTI_RAIL_DEGRADATION (Systemic Stress)</option>
+                  <option value="UPI_OUTAGE">UPI_OUTAGE (Immediate Fallback Required)</option>
+                  <option value="CARD_DEGRADATION">CARD_DEGRADATION (3DS Timeout Spike)</option>
+                  <option value="RECOVERY">RECOVERY (Deterministic Upward Curve)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Deterministic Seed</label>
+                <input type="number" id="intel-seed-input" value="42" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+              </div>
+              <div>
+                <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Chaos Injection</label>
+                <select id="intel-chaos-select" class="step-code-box" style="width: 100%; margin-top: 4px; padding: 8px 12px; color: var(--text-primary);">
+                  <option value="NONE" selected>None (Clean Execution)</option>
+                  <option value="PREDICTOR_UNAVAILABLE">PREDICTOR_UNAVAILABLE (Reactive Fallback)</option>
+                  <option value="MALFORMED_PREDICTION">MALFORMED_PREDICTION (Out-of-Bounds)</option>
+                  <option value="NETWORK_HEALTH_UNAVAILABLE">NETWORK_HEALTH_UNAVAILABLE (Missing Data)</option>
+                  <option value="KILL_SWITCH_PREVENTIVE">KILL_SWITCH_PREVENTIVE (Emergency Stop)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end;">
+              <button class="btn btn-primary" id="btn-intel-run-sim" style="padding: 10px 24px; font-weight: 700;">
+                ▶ RUN PAYMENT INTEL (13-STAGE LIFECYCLE)
+              </button>
+            </div>
+          </div>
+
+          <!-- SIMULATED NETWORK HEALTH BOARD -->
+          <div class="card" style="margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+                  <span>🌐 Simulated Network Health Engine</span>
+                  <span class="badge badge-secondary" style="font-size: 0.7rem;">Deterministic Scenario Presets</span>
+                </div>
+                <div class="card-subtitle">Scenario-driven synthetic telemetry with repeatable random seeds. Not a live production feed.</div>
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">
+                INVARIANT: SIMULATION_ONLY (NO_LIVE_RAZORPAY_CLAIMS)
+              </div>
+            </div>
+
+            <!-- Warning Callout -->
+            <div style="background: rgba(245, 158, 11, 0.08); border-left: 3px solid var(--warning); padding: 10px 14px; border-radius: 4px; margin-bottom: 16px; font-size: 0.78rem; color: var(--text-secondary);">
+              <b style="color: var(--warning);">ENGINEERING DISCLOSURE:</b> Values such as SBI = 43.0 are scenario simulation presets for benchmark stress testing, NOT live production telemetry. In production, this engine consumes verified webhook telemetry or PSP status APIs.
+            </div>
+
+            <!-- Rail Cards Container -->
+            <div id="intel-rail-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+              <div style="color: var(--text-muted); font-size: 0.8rem;">Loading simulated network telemetry...</div>
+            </div>
+
+            <!-- 7-Step Temporal Degradation Timeline -->
+            <div style="border-top: 1px solid var(--border-color); padding-top: 14px;">
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 10px;">
+                7-Step Temporal Degradation Timeline (T-15m to T+15m Trajectory)
+              </div>
+              <div id="intel-timeline-steps" style="display: flex; gap: 8px; overflow-x: auto; padding: 2px 0;">
+                <div style="color: var(--text-muted); font-size: 0.8rem;">Loading temporal timeline...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Split: Pre-Flight Risk & Governor vs 13-Stage Lifecycle Stepper -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 24px;">
+            <!-- Left: Pre-Flight Risk & Governor Evaluation -->
+            <div>
+              <!-- Pre-Flight Risk Radar Card -->
+              <div class="card" style="margin-bottom: 24px;">
+                <div class="card-title" style="margin-bottom: 12px;">Pre-Flight Failure Risk Radar</div>
+                <div class="card-subtitle" style="margin-bottom: 16px;">Deterministic failure-risk estimate generated strictly prior to payment dispatch (zero future leakage).</div>
+
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                  <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+                    <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">SIMULATED FAILURE PROBABILITY</span>
+                    <span id="radar-prob-val" style="font-size: 1.8rem; font-weight: 800; color: var(--danger);">0.0%</span>
+                  </div>
+                  <div class="readiness-progress-bar-bg" style="height: 10px; margin-bottom: 12px;">
+                    <div id="radar-prob-bar" class="readiness-progress-bar-fill" style="width: 0%; background: var(--danger);"></div>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-muted);">
+                    <span>Confidence: <b id="radar-confidence" style="color: var(--text-primary);">N/A</b> (<span id="radar-conf-score">0%</span>)</span>
+                    <span>Source: <b id="radar-source" style="color: var(--accent);">SYNTHETIC_PREDICTIVE_MODEL</b></span>
+                  </div>
+                </div>
+
+                <div>
+                  <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">
+                    Top Risk Drivers
+                  </div>
+                  <ul id="radar-factors-list" style="list-style: none; padding: 0; margin: 0;">
+                    <li style="font-size: 0.8rem; color: var(--text-muted);">Run simulation to evaluate risk factors...</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Preventive Governor Decision & Explainability Drawer -->
+              <div class="card">
+                <div class="card-title" style="margin-bottom: 12px;">Preventive Governor Authority & Explainability</div>
+                <div class="card-subtitle" style="margin-bottom: 16px;">Deterministic Governor gates prevent unsafe AI actions. Financial authority remains 100% deterministic.</div>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
+                  <div style="padding: 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px;">
+                    <div style="font-size: 0.7rem; color: var(--text-muted);">GOVERNOR GATE</div>
+                    <div id="prev-decision-outcome" class="badge badge-secondary" style="margin-top: 4px;">PENDING</div>
+                  </div>
+                  <div style="padding: 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px;">
+                    <div style="font-size: 0.7rem; color: var(--text-muted);">SELECTED ACTION</div>
+                    <div id="prev-selected-action" style="font-size: 0.8rem; font-family: monospace; font-weight: 700; margin-top: 4px;">NONE</div>
+                  </div>
+                  <div style="padding: 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px;">
+                    <div style="font-size: 0.7rem; color: var(--text-muted);">NET PREVENTIVE ERV</div>
+                    <div id="prev-net-erv" style="font-size: 0.95rem; font-weight: 800; color: var(--accent); margin-top: 4px;">₹0.00</div>
+                  </div>
+                </div>
+
+                <!-- Structured Explainability Drawer -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px;">
+                  <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; margin-bottom: 10px;">
+                    Deterministic Explainability Log
+                  </div>
+                  <div style="margin-bottom: 10px;">
+                    <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">1. WHY ACT:</div>
+                    <div id="exp-why-act" style="font-size: 0.82rem; color: var(--text-primary); margin-top: 2px;">Awaiting simulation run...</div>
+                  </div>
+                  <div style="margin-bottom: 10px;">
+                    <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">2. WHY THIS ACTION:</div>
+                    <div id="exp-why-this" style="font-size: 0.82rem; color: var(--text-primary); margin-top: 2px;">Awaiting simulation run...</div>
+                  </div>
+                  <div style="margin-bottom: 10px;">
+                    <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">3. WHY NOT ALTERNATIVES:</div>
+                    <div id="exp-why-not" style="font-size: 0.82rem; color: var(--text-primary); margin-top: 2px;">Awaiting simulation run...</div>
+                  </div>
+                  <div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">4. SAFETY GATES VERIFIED:</div>
+                    <div id="exp-gates" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px; font-family: monospace;">Awaiting simulation run...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: 13-Stage Unified Lifecycle Stepper -->
+            <div class="card">
+              <div class="card-title" style="margin-bottom: 12px;">Unified 13-Stage Payment Lifecycle</div>
+              <div class="card-subtitle" style="margin-bottom: 16px;">Chronological trace showing transition from Pre-Flight prediction through Governor approval to execution and attribution.</div>
+
+              <div id="lifecycle-stepper-stages" style="max-height: 620px; overflow-y: auto; padding-right: 6px;">
+                <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                  <div style="font-size: 2rem; margin-bottom: 8px;">⏱️</div>
+                  <div>Click <b>Run Payment Intel</b> above to execute and trace the full 13-stage lifecycle.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PREDICTION RELIABILITY (NO FAKE CLAIMS) -->
+          <div class="card" style="margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <div class="card-title">Prediction Reliability & Statistical Quality</div>
+                <div class="card-subtitle">Rigorous statistical evaluation against synthetic ground-truth outcomes. No unmeasured "calibrated" claims.</div>
+              </div>
+              <span class="badge badge-info">Zero Future Leakage</span>
+            </div>
+
+            <!-- Reliability Metrics Grid -->
+            <div class="grid-metrics" style="margin-bottom: 20px;">
+              <div class="metric-card">
+                <div class="metric-label">Precision</div>
+                <div class="metric-value text-blue" id="rel-precision">N/A</div>
+                <div class="metric-subtext">True Positives / (TP + FP)</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Recall (Sensitivity)</div>
+                <div class="metric-value text-purple" id="rel-recall">N/A</div>
+                <div class="metric-subtext">True Positives / (TP + FN)</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">F1 Score</div>
+                <div class="metric-value text-success" id="rel-f1">N/A</div>
+                <div class="metric-subtext">Harmonic mean of Precision & Recall</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Brier Score</div>
+                <div class="metric-value text-blue" id="rel-brier">N/A</div>
+                <div class="metric-subtext">mean((p - y)²); Lower is superior</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">False Positive Rate</div>
+                <div class="metric-value text-warning" id="rel-fpr">N/A</div>
+                <div class="metric-subtext">False Positives / (FP + TN)</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Accuracy</div>
+                <div class="metric-value" id="rel-accuracy">N/A</div>
+                <div class="metric-subtext">Total Correct / Evaluated (<span id="rel-total-count">0</span>)</div>
+              </div>
+            </div>
+
+            <!-- 5-Bin Reliability Breakdown Table -->
+            <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+              <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 10px;">
+                5-Bin Prediction Reliability Curve ([0.0-0.2] .. [0.8-1.0])
+              </div>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Predicted Risk Bin</th>
+                      <th style="text-align: center;">Sample Count</th>
+                      <th style="text-align: right;">Predicted Average</th>
+                      <th style="text-align: right;">Actual Failure Rate</th>
+                      <th style="text-align: right;">Prediction Error (Bias)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-reliability-buckets">
+                    <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading reliability bins...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- PREVENTION ECONOMICS PANEL -->
+          <div class="card" style="margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <div class="card-title">Predictive Prevention Economics</div>
+                <div class="card-subtitle">Conservative counterfactual attribution. Avoided failures must have causal evidence, not mere correlation.</div>
+              </div>
+              <span class="badge badge-success">Conservative Attribution</span>
+            </div>
+
+            <div class="grid-metrics" style="margin-bottom: 16px;">
+              <div class="metric-card">
+                <div class="metric-label">Total Payment Attempts</div>
+                <div class="metric-value" id="econ-total-attempts">0</div>
+                <div class="metric-subtext">Synthetic payment transactions</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">High-Risk Predictions</div>
+                <div class="metric-value text-danger" id="econ-high-risk">0</div>
+                <div class="metric-subtext">Risk &ge; 0.65 threshold</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Interventions Approved</div>
+                <div class="metric-value text-purple" id="econ-interventions-approved">0</div>
+                <div class="metric-subtext">Passed all 5 Governor safety gates</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Failures Prevented</div>
+                <div class="metric-value text-success" id="econ-failures-prevented">0</div>
+                <div class="metric-subtext">Verified PREVENTED_FAILURE</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Unnecessary Interventions</div>
+                <div class="metric-value text-warning" id="econ-unnecessary">0</div>
+                <div class="metric-subtext">False positive interventions</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Prevented GMV</div>
+                <div class="metric-value text-success" id="econ-prevented-gmv">₹0.00</div>
+                <div class="metric-subtext">Protected transaction volume</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Intervention Cost</div>
+                <div class="metric-value text-muted" id="econ-intervention-cost">₹0.00</div>
+                <div class="metric-subtext">Friction, discount & routing fees</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Net Preventive Value</div>
+                <div class="metric-value text-purple" id="econ-net-value">₹0.00</div>
+                <div class="metric-subtext">Net Economic Recovery (ERV Hurdle &gt; 0)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PREDICTION VS OUTCOME LIVE AUDIT TABLE -->
+          <div class="card">
+            <div class="card-title" style="margin-bottom: 12px;">Prediction Error & Ground-Truth Feedback Loop</div>
+            <div class="card-subtitle" style="margin-bottom: 16px;">Predictions feed into an explicit prediction-error feedback loop. False positives and errors are transparently measured.</div>
+
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Payment ID</th>
+                    <th>Simulated Probability</th>
+                    <th>Actual Outcome</th>
+                    <th>Probability Error</th>
+                    <th>Classification Result</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-prediction-history">
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading prediction outcome audit...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -823,5 +1171,6 @@
   <script src="/static/js/chaos.js"></script>
   <script src="/static/js/audit.js"></script>
   <script src="/static/js/sandbox.js"></script>
+  <script src="/static/js/intelligence.js"></script>
 </body>
 </html>

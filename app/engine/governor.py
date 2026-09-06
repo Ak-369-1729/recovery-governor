@@ -12,15 +12,22 @@ from app.models.enums import (
     GateStatus,
     DecisionOutcome,
     GovernorOperatingMode,
+    PredictionConfidence,
+    ACTION_CATALOG,
 )
 from app.models.schemas import (
     PolicyGateCheck,
     GovernorDecision,
     AIDiagnosisOutput,
     ERVCalculation,
+    FailurePrediction,
+    PreventiveERVCalculation,
+    PreventiveGovernorDecision,
+    MerchantPolicyConfig,
 )
 from app.engine.erv import ERVEngine
 from app.models.repositories import get_execution_by_idempotency, utc_now_iso
+from app.engine.merchant_policy import MerchantPolicyManager
 
 class EmergencyKillSwitchManager:
     """
@@ -429,3 +436,268 @@ class RecoveryGovernor:
             governor_version=self.version,
             timestamp=now_iso
         )
+
+    def evaluate_prevention(
+        self,
+        payment: Dict[str, Any],
+        prediction: FailurePrediction,
+        merchant_policy: Optional[MerchantPolicyConfig] = None,
+    ) -> PreventiveGovernorDecision:
+        """
+        Evaluates preventive intervention candidates proposed by the Failure Predictor.
+        Pre-flight deterministic gates:
+        - Pre-Gate 0: Emergency Kill Switch
+        - Gate 1: Prediction Confidence & Schema Bounds
+        - Gate 2: Preventive Risk Threshold (P >= 0.50)
+        - Gate 3: Merchant Policy & Friction Bounds (Global safety overrides merchant)
+        - Gate 4: Preventive ERV Economic Hurdle
+        - Gate 5: Stopping Rule & Selection Rationale
+        """
+        payment_id = payment.get("payment_id", prediction.payment_id)
+        amount = float(payment.get("amount", 1000.0))
+        merchant_id = payment.get("merchant_id", "mer_default")
+        now_iso = utc_now_iso()
+        decision_id = f"prev_dec_{hashlib.sha256(f'{payment_id}_{now_iso}'.encode()).hexdigest()[:16]}"
+
+        if not merchant_policy:
+            merchant_policy = MerchantPolicyManager.get_policy(merchant_id)
+
+        policy_checks: List[PolicyGateCheck] = []
+        blocked_actions: List[str] = []
+
+        # --- PRE-GATE: GLOBAL EMERGENCY KILL SWITCH ---
+        if EmergencyKillSwitchManager.is_active():
+            EmergencyKillSwitchManager.record_blocked(amount)
+            kill_gate = PolicyGateCheck(
+                gate_name="GATE_0_EMERGENCY_KILL_SWITCH",
+                status=GateStatus.BLOCKED,
+                reason="EMERGENCY_STOP_ENGAGED: All automated pre-flight interventions globally halted.",
+                details=EmergencyKillSwitchManager.get_status(),
+            )
+            return PreventiveGovernorDecision(
+                decision_id=decision_id,
+                payment_id=payment_id,
+                failure_prediction=prediction,
+                governor_status=GateStatus.BLOCKED,
+                decision_outcome="EMERGENCY_STOP_BLOCKED",
+                selected_action=ActionType.NO_ACTION,
+                net_preventive_erv=0.0,
+                erv_breakdown={},
+                policy_checks=[kill_gate],
+                blocked_actions=[a.value for a in prediction.candidate_preventive_actions],
+                explainability={
+                    "why_act": "Pre-flight failure risk predicted.",
+                    "why_this_action": "Emergency Kill Switch engaged; all actions blocked to protect financial rails.",
+                    "why_not_alternatives": "Zero execution authorized during emergency stop.",
+                    "safety_gates_summary": "Gate 0 (Kill Switch) BLOCKED.",
+                },
+                timestamp=now_iso,
+            )
+
+        # --- GATE 1: PREDICTION CONFIDENCE & BOUNDS ---
+        sim_prob = prediction.simulated_failure_probability
+        conf_score = prediction.confidence_score
+        is_malformed = (sim_prob < 0.0 or sim_prob > 1.0 or conf_score < 0.40)
+        
+        if is_malformed:
+            policy_checks.append(PolicyGateCheck(
+                gate_name="GATE_1_PREDICTION_QUALITY_GATE",
+                status=GateStatus.BLOCKED,
+                reason=f"Prediction failed safety bounds (prob={sim_prob}, conf={conf_score}). Active intervention prohibited.",
+                details={"prob": sim_prob, "conf": conf_score},
+            ))
+            return PreventiveGovernorDecision(
+                decision_id=decision_id,
+                payment_id=payment_id,
+                failure_prediction=prediction,
+                governor_status=GateStatus.BLOCKED,
+                decision_outcome="REJECTED_LOW_CONFIDENCE",
+                selected_action=ActionType.NO_ACTION,
+                net_preventive_erv=0.0,
+                erv_breakdown={},
+                policy_checks=policy_checks,
+                blocked_actions=[a.value for a in prediction.candidate_preventive_actions if a != ActionType.NO_ACTION],
+                explainability={
+                    "why_act": "Predictor generated alert.",
+                    "why_this_action": "Prediction rejected due to insufficient confidence or malformed bounds.",
+                    "why_not_alternatives": "Cannot intervene on low-confidence synthetic predictions.",
+                    "safety_gates_summary": "Gate 1 (Prediction Quality) BLOCKED.",
+                },
+                timestamp=now_iso,
+            )
+        else:
+            policy_checks.append(PolicyGateCheck(
+                gate_name="GATE_1_PREDICTION_QUALITY_GATE",
+                status=GateStatus.PASSED,
+                reason=f"Prediction confidence {conf_score:.2f} ({prediction.confidence.value}) satisfies gate threshold (>= 0.40).",
+                details={"prob": sim_prob, "conf": conf_score},
+            ))
+
+        # --- GATE 2: PREVENTIVE RISK THRESHOLD (P >= 0.50) ---
+        if sim_prob < 0.50:
+            policy_checks.append(PolicyGateCheck(
+                gate_name="GATE_2_PREVENTIVE_THRESHOLD",
+                status=GateStatus.BLOCKED,
+                reason=f"Simulated failure probability ({sim_prob:.1%}) is below active prevention threshold (50.0%).",
+                details={"simulated_failure_probability": sim_prob, "threshold": 0.50},
+            ))
+            return PreventiveGovernorDecision(
+                decision_id=decision_id,
+                payment_id=payment_id,
+                failure_prediction=prediction,
+                governor_status=GateStatus.PASSED,
+                decision_outcome="NO_ACTION_LOW_RISK",
+                selected_action=ActionType.NO_ACTION,
+                net_preventive_erv=0.0,
+                erv_breakdown={},
+                policy_checks=policy_checks,
+                blocked_actions=[a.value for a in prediction.candidate_preventive_actions if a != ActionType.NO_ACTION],
+                explainability={
+                    "why_act": "Risk within acceptable bounds.",
+                    "why_this_action": "Selected NO_ACTION: failure risk (%.1f%%) does not warrant customer friction." % (sim_prob * 100),
+                    "why_not_alternatives": "Active interventions introduce unnecessary cost on low-risk transactions.",
+                    "safety_gates_summary": "Gate 2 (Risk Threshold) held action to NO_ACTION.",
+                },
+                timestamp=now_iso,
+            )
+        else:
+            policy_checks.append(PolicyGateCheck(
+                gate_name="GATE_2_PREVENTIVE_THRESHOLD",
+                status=GateStatus.PASSED,
+                reason=f"Simulated failure probability ({sim_prob:.1%}) exceeds prevention threshold (50.0%).",
+                details={"simulated_failure_probability": sim_prob, "threshold": 0.50},
+            ))
+
+        # --- GATE 3: MERCHANT POLICY & FRICTION GATE ---
+        candidates = list(prediction.candidate_preventive_actions)
+        if ActionType.NO_ACTION not in candidates:
+            candidates.append(ActionType.NO_ACTION)
+
+        filtered_candidates: List[ActionType] = []
+        for act in candidates:
+            cat = ACTION_CATALOG.get(act, {})
+            friction = cat.get("friction_cost", 0.0)
+
+            # Check merchant prohibition
+            if not merchant_policy.allow_prevention and act != ActionType.NO_ACTION:
+                blocked_actions.append(act.value)
+                continue
+
+            if act in merchant_policy.prohibited_preventive_actions:
+                blocked_actions.append(act.value)
+                continue
+
+            if friction > merchant_policy.max_prevention_friction and act != ActionType.NO_ACTION:
+                blocked_actions.append(act.value)
+                continue
+
+            filtered_candidates.append(act)
+
+        policy_checks.append(PolicyGateCheck(
+            gate_name="GATE_3_MERCHANT_POLICY",
+            status=GateStatus.PASSED if filtered_candidates else GateStatus.BLOCKED,
+            reason=f"Evaluated merchant policy. {len(blocked_actions)} actions filtered by merchant friction/prohibition bounds.",
+            details={
+                "merchant_id": merchant_policy.merchant_id,
+                "allow_prevention": merchant_policy.allow_prevention,
+                "max_friction": merchant_policy.max_prevention_friction,
+                "blocked": blocked_actions,
+            },
+        ))
+
+        # --- GATE 4: PREVENTIVE ERV ECONOMIC HURDLE ---
+        erv_map: Dict[str, PreventiveERVCalculation] = {}
+        viable_actions: List[ActionType] = []
+
+        # Success multiplier estimate with preventive intervention
+        action_efficacy = {
+            ActionType.RECOMMEND_ALTERNATE_PAYMENT_PATH: 0.88,  # Switching to healthy rail avoids issuer failure
+            ActionType.DELAY_ATTEMPT: 0.76,                     # Delaying allows spike to clear
+            ActionType.CUSTOMER_NOTIFICATION: 0.70,             # Customer uses alternative card
+            ActionType.SEND_PAYMENT_LINK: 0.65,
+            ActionType.NO_ACTION: 0.0,
+        }
+
+        for act in filtered_candidates:
+            cat = ACTION_CATALOG.get(act, {})
+            cost = float(cat.get("intervention_cost", 0.0))
+            risk_cost = float(cat.get("risk_cost", 0.0))
+            friction_cost = float(cat.get("friction_cost", 0.0))
+            efficacy = action_efficacy.get(act, 0.50)
+
+            prevented_gross = round(sim_prob * amount * efficacy, 2)
+            net_erv = round(prevented_gross - cost - risk_cost - friction_cost, 2)
+            is_viable = (net_erv > 0.0) or (act == ActionType.NO_ACTION)
+
+            calc = PreventiveERVCalculation(
+                action=act,
+                simulated_failure_probability=sim_prob,
+                success_probability_with_action=efficacy,
+                payment_amount=amount,
+                prevented_gross_value=prevented_gross,
+                intervention_cost=cost,
+                risk_cost=risk_cost,
+                friction_cost=friction_cost,
+                net_preventive_erv=net_erv,
+                is_viable=is_viable,
+                formula_breakdown=f"({sim_prob:.2f} * ₹{amount:,.0f} * {efficacy:.2f}) - (cost ₹{cost} + risk ₹{risk_cost} + friction ₹{friction_cost}) = ₹{net_erv:,.2f}",
+            )
+            erv_map[act.value] = calc
+            if is_viable and act != ActionType.NO_ACTION:
+                viable_actions.append(act)
+
+        # Sort viable actions by Net Preventive ERV descending
+        viable_actions.sort(key=lambda a: erv_map[a.value].net_preventive_erv, reverse=True)
+
+        if viable_actions:
+            best_action = viable_actions[0]
+            selected_action = best_action
+            best_erv = erv_map[best_action.value]
+            decision_outcome = "APPROVED"
+            final_reason = f"Authorized preventive intervention {best_action.value}. Expected net economic benefit ₹{best_erv.net_preventive_erv:,.2f}."
+            governor_status = GateStatus.PASSED
+        else:
+            selected_action = ActionType.NO_ACTION
+            decision_outcome = "REJECTED_NEGATIVE_ERV"
+            final_reason = "No preventive action cleared the economic hurdle. Selected NO_ACTION to avoid negative ROI."
+            governor_status = GateStatus.PASSED
+
+        policy_checks.append(PolicyGateCheck(
+            gate_name="GATE_4_PREVENTIVE_ERV",
+            status=GateStatus.PASSED if viable_actions else GateStatus.SUPPRESSED,
+            reason=final_reason,
+            details={"selected_action": selected_action.value, "viable_count": len(viable_actions)},
+        ))
+
+        # Build Explainability Drawer
+        why_act = f"Payment ₹{amount:,.0f} has simulated failure risk of {sim_prob:.1%} due to {', '.join(prediction.contributing_factors[:2])}."
+        why_this = (
+            f"Authorized {selected_action.value} because it delivers ₹{erv_map.get(selected_action.value, PreventiveERVCalculation(action=selected_action, simulated_failure_probability=sim_prob, success_probability_with_action=0.0, payment_amount=amount, prevented_gross_value=0.0, intervention_cost=0.0, risk_cost=0.0, friction_cost=0.0, net_preventive_erv=0.0, is_viable=True, formula_breakdown='')).net_preventive_erv:,.2f} in net economic value."
+            if selected_action != ActionType.NO_ACTION else "Intervention suppressed: Doing nothing preserves higher expected value."
+        )
+        why_not = (
+            f"Filtered out {', '.join(blocked_actions)} due to merchant policy / friction caps. Alternative viable candidates offered lower net ERV."
+            if blocked_actions else "Other candidates generated lower net economic recovery value."
+        )
+        gates_summary = f"Passed {sum(1 for c in policy_checks if c.status == GateStatus.PASSED)}/{len(policy_checks)} gates."
+
+        return PreventiveGovernorDecision(
+            decision_id=decision_id,
+            payment_id=payment_id,
+            failure_prediction=prediction,
+            governor_status=governor_status,
+            decision_outcome=decision_outcome,
+            selected_action=selected_action,
+            net_preventive_erv=erv_map.get(selected_action.value, PreventiveERVCalculation(action=selected_action, simulated_failure_probability=sim_prob, success_probability_with_action=0.0, payment_amount=amount, prevented_gross_value=0.0, intervention_cost=0.0, risk_cost=0.0, friction_cost=0.0, net_preventive_erv=0.0, is_viable=True, formula_breakdown="")).net_preventive_erv if selected_action in erv_map else 0.0,
+            erv_breakdown=erv_map,
+            policy_checks=policy_checks,
+            blocked_actions=blocked_actions,
+            explainability={
+                "why_act": why_act,
+                "why_this_action": why_this,
+                "why_not_alternatives": why_not,
+                "safety_gates_summary": gates_summary,
+            },
+            timestamp=now_iso,
+        )
+

@@ -236,7 +236,89 @@ Executor
 
 ---
 
-## 10. Quickstart & Installation
+## 10. Phase 3 & 3.1 Hardening: Predict → Prevent → Recover → Prove
+
+In Phase 3.1, Recovery Governor evolved from a purely reactive post-failure engine into a unified revenue recovery intelligence layer that operates across the full payment lifecycle:
+
+```text
+PAYMENT ATTEMPT
+      ↓
+FAILURE PREDICTOR (Simulated Failure-Risk Estimate, Zero Future Leakage)
+      ↓
+PREDICTION + CONFIDENCE (Simulated Probability, Contributing Factors)
+      ↓
+PREDICTION EVALUATION (Brier Score & 5-Bin Reliability Tracking)
+      ↓
+PREVENTION CANDIDATES (Alternate Path, Cooldown Delay, User Notification)
+      ↓
+DETERMINISTIC RECOVERY GOVERNOR (5 Pre-Flight Safety Gates)
+      ↓
+BOUNDED ACTION (Approved / Suppressed / No Action)
+      ↓
+EXECUTOR (Simulation / Proposed SDK Adapter)
+      ↓
+VERIFIER (Confirmed Settlement / Timeout / Terminal Failure)
+      ↓
+ACTUAL OUTCOME
+      ↓
+CONSERVATIVE ATTRIBUTION (Prevented Failure vs Natural Success vs Unknown)
+      ↓
+PREDICTION ERROR / MODEL EVALUATION (Residual Bias & Feedback Loop)
+      ↓
+LEARNING / READINESS (Bayesian Priors & Empirical AI Readiness Score)
+```
+
+> **The Central Invariant**:
+> **AI proposes → Deterministic Governor decides → Bounded action executes → Verifier confirms → Attribution measures → System learns.**
+> The Predictor and LLM **NEVER** have financial authority.
+
+### The 4 Hardening Pillars
+
+#### 1. Removal of Unsupported "Calibrated" Claims
+- Replaced all unverified "calibrated" terminology with honest descriptors: **simulated failure probability**, **deterministic failure-risk estimate**, and **Prediction Reliability**.
+- The UI, API, schemas, and documentation transparently identify synthetic predictions as simulation-derived.
+
+#### 2. Deterministic Prediction Evaluation Engine (`app/engine/prediction_evaluation.py`)
+- Evaluates predictions against synthetic ground-truth outcomes with strictly **zero future outcome leakage**.
+- **Classification Metrics**:
+  - True Positive (TP), True Negative (TN), False Positive (FP), False Negative (FN)
+  - Precision: $\frac{\text{TP}}{\text{TP} + \text{FP}}$
+  - Recall: $\frac{\text{TP}}{\text{TP} + \text{FN}}$
+  - F1 Score: $2 \times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}$
+  - False Positive Rate: $\frac{\text{FP}}{\text{FP} + \text{TN}}$
+  - Accuracy: $\frac{\text{TP} + \text{TN}}{\text{Total}}$
+  - Returns `"N/A"` safely when samples are insufficient — never `null`, `NaN`, or `undefined`.
+- **Probability Quality & Brier Score**:
+  $$\text{Brier Score} = \frac{1}{N} \sum_{i=1}^N (\hat{p}_i - y_i)^2$$
+  where $\hat{p}_i$ is the simulated failure probability and $y_i \in \{0, 1\}$ is the actual outcome (1 = failed, 0 = succeeded). Lower is better.
+- **5-Bin Prediction Reliability Curve**:
+  Evaluates reliability across $[0.0-0.2], [0.2-0.4], [0.4-0.6], [0.6-0.8], [0.8-1.0]$ buckets, displaying Sample Count, Predicted Average, Actual Failure Rate, and Prediction Error (Bias).
+
+#### 3. Prevention Economics & Conservative Attribution
+- **Conservative Attribution Categories**:
+  - `PREVENTED_FAILURE`: Simulation provides counterfactual evidence that the intervention converted a failure to a success.
+  - `NATURAL_SUCCESS`: Payment succeeded without requiring intervention.
+  - `FAILED_PREVENTION`: Intervention was executed but the attempt still failed.
+  - `UNKNOWN_PREVENTION`: Causal impact cannot be conclusively verified (prefers honesty over inflated claims).
+- **Prevention Economics Metrics**:
+  - Total payment attempts, high-risk predictions, approved preventive candidates, failures prevented, unnecessary interventions, prevented GMV, intervention cost, and net preventive economic value.
+
+#### 4. Simulated Network Health Engine with Deterministic Seeds (`app/engine/network_health.py`)
+- **Deterministic Scenario Presets**:
+  - `NORMAL`: Healthy baseline across all payment rails.
+  - `SBI_DEGRADED`: SBI UPI degradation scenario (e.g. 43.0 health, 380ms latency, 14.5% timeout rate).
+  - `ICICI_DEGRADED`: Transient ICICI Netbanking degradation.
+  - `MULTI_RAIL_DEGRADATION`: Systemic multi-rail network stress.
+  - `UPI_OUTAGE`: Major UPI gateway outage requiring alternate payment methods.
+  - `CARD_DEGRADATION`: 3D-Secure ACS server degradation.
+  - `RECOVERY`: Upward recovery trajectory.
+- **Repeatable Random Seeds**: Given the same scenario + seed (e.g. `seed=42`), telemetry outputs are mathematically identical.
+- **7-Step Temporal Degradation Timeline**: Models health across time ($T-15\text{m}$ to $T+15\text{m}$), demonstrating how changing expected recovery value dynamically guides the Governor.
+- **Honest Disclaimers**: Explicitly disclaims live Razorpay production routing authority; values are benchmark simulation presets.
+
+---
+
+## 11. Quickstart & Installation
 
 ### Prerequisites
 - Python 3.10+ (Tested on Python 3.14)
@@ -244,7 +326,7 @@ Executor
 
 ### Installation
 ```bash
-git clone <repo-url>
+git clone https://github.com/Ak-369-1729/recovery-governor.git
 cd recovery-governor
 pip install -r requirements.txt
 ```
@@ -261,11 +343,19 @@ The database initializes automatically with SQLite in WAL mode and populates the
 ```bash
 python -m pytest tests/ -v
 ```
-All 29 tests validate the Governor gates, ERV engine, Bayesian learner, chaos scenarios, and all 5 Phase-2 upgrades (What-If, Readiness, Constrained Autonomy, Portfolio Simulation, Counterfactual Replay).
+**41 automated test cases** validate:
+- 8 Deterministic Governor safety gates + Gate 0 Hardware Kill Switch
+- ERV engine & Bayesian learner
+- What-If simulator, Strategy Arena, Recovery AI Readiness Score, and Counterfactual Replay
+- Failure Predictor (deterministic predictions, no outcome leakage, probability bounds)
+- Prediction Evaluation Engine (Precision, Recall, F1, FPR, Brier score, 5-bin reliability, safe `"N/A"`)
+- Simulated Network Health Engine (scenario presets, seed reproducibility, 7-step timeline)
+- Preventive Governor Evaluation (ERV hurdle, merchant policy immunity, kill switch)
+- Conservative Prevention Attribution & Unified 13-Stage Lifecycle
 
 ---
 
-## 11. AI & Razorpay Configuration
+## 12. AI & Razorpay Configuration
 
 The application runs completely out-of-the-box in **Deterministic Fallback + Simulation Mode** with zero external credentials required.
 
@@ -284,7 +374,7 @@ RAZORPAY_KEY_SECRET=...
 
 ---
 
-## 12. Project Structure
+## 13. Project Structure
 
 ```text
 recovery-governor/
@@ -299,26 +389,35 @@ recovery-governor/
 │   │   ├── routes_decisions.py  # Decisions and Decision Replay
 │   │   ├── routes_benchmark.py  # 3-Way benchmark runner
 │   │   ├── routes_experiments.py# 4-Arm strategy experiment
-│   │   ├── routes_chaos.py      # 5 Chaos scenario runners
+│   │   ├── routes_chaos.py      # Resilience chaos runners
 │   │   ├── routes_audit.py      # Cryptographic audit logs and verification
 │   │   ├── routes_demo.py       # 2-minute live demo orchestration
-│   │   └── routes_sandbox.py    # Sandbox, What-If, Arena, Readiness, Kill-Switch APIs
+│   │   ├── routes_sandbox.py    # Sandbox, What-If, Arena, Readiness, Kill-Switch APIs
+│   │   ├── routes_prediction.py # Prediction evaluation, metrics, reliability curve, history
+│   │   ├── routes_network.py    # Simulated network health & temporal timeline APIs
+│   │   ├── routes_lifecycle.py  # 13-stage unified payment lifecycle orchestration
+│   │   └── routes_merchant_policy.py # Merchant policy configuration
 │   │
 │   ├── engine/                  # Core Algorithmic Engines
-│   │   ├── governor.py          # Deterministic Recovery Governor (8 Gates + Kill Switch)
+│   │   ├── governor.py          # Deterministic Recovery Governor (8 Gates + Pre-Gate 0 Kill Switch)
 │   │   ├── erv.py               # Expected Recovery Value (ERV) Engine
 │   │   ├── bayesian.py          # Conjugate Beta-Binomial Bayesian Model
 │   │   ├── diagnosis.py         # Gemini AI Diagnosis Engine
 │   │   ├── fallback.py          # Deterministic Fallback Diagnosis Engine
 │   │   ├── executor.py          # Simulation & Razorpay Test Adapters
 │   │   ├── verifier.py          # Settlement Verifier (Succeeded/Failed/Unknown)
-│   │   ├── attribution.py       # Causal Incremental Recovery Attribution
+│   │   ├── attribution.py       # Causal Incremental Recovery & Prevention Attribution
+│   │   ├── predictor.py         # Pre-flight Failure Predictor (No future leakage)
+│   │   ├── prediction_evaluation.py # Brier score, F1, 5-bin reliability breakdown
+│   │   ├── network_health.py    # Scenario-driven simulated network health with seeds
+│   │   ├── merchant_policy.py   # Merchant policy manager with global safety immunity
+│   │   ├── lifecycle.py         # Unified 13-stage payment lifecycle engine
 │   │   ├── synthetic_data.py    # 5,000 reproducible synthetic dataset generator
 │   │   ├── benchmark.py         # Control / Baseline / Governor benchmark
 │   │   ├── experiments.py       # A/B/n strategy testing
 │   │   ├── chaos.py             # Resilience chaos laboratory
 │   │   ├── replay.py            # Chronological decision replay pipeline
-│   │   └── sandbox.py           # Phase-2 What-If, Arena, Readiness, Autonomy Engine
+│   │   └── sandbox.py           # What-If, Arena, Readiness, Autonomy Engine
 │   │
 │   ├── models/                  # Data Architecture
 │   │   ├── database.py          # SQLite WAL mode initialization
@@ -327,20 +426,30 @@ recovery-governor/
 │   │   └── repositories.py      # Data access layer & SHA-256 audit chaining
 │   │
 │   └── static/                  # Vanilla ES6 UI (Zero Node/NPM)
-│       ├── index.html           # Single-page interface
+│       ├── index.html           # Single-page interface with Payment Intelligence view
 │       ├── css/app.css          # Dark fintech Razorpay-inspired styling
 │       └── js/                  # View controllers
-│           ├── app.js
-│           ├── dashboard.js
-│           ├── payments.js
-│           ├── replay.js
-│           ├── benchmark.js
-│           ├── experiments.js
-│           ├── chaos.js
-│           ├── audit.js
-│           └── sandbox.js       # Phase-2 Recovery Sandbox view controller
+│           ├── app.js           # Router & navigation
+│           ├── intelligence.js  # Payment Intelligence & Lifecycle view controller
+│           ├── dashboard.js     # Overview metrics
+│           ├── payments.js      # Recovery queue
+│           ├── replay.js        # Decision replay
+│           ├── benchmark.js     # 3-way benchmark
+│           ├── experiments.js   # A/B/n experiments
+│           ├── chaos.js         # Chaos lab
+│           ├── audit.js         # Cryptographic audit
+│           └── sandbox.js       # Recovery Sandbox view controller
 │
-├── tests/                       # Automated Test Suite (29 test cases)
+├── tests/                       # Automated Test Suite (41 test cases)
+│   ├── test_governor.py
+│   ├── test_erv.py
+│   ├── test_bayesian.py
+│   ├── test_audit.py
+│   ├── test_benchmark.py
+│   ├── test_experiments.py
+│   ├── test_chaos.py
+│   ├── test_sandbox_phase2.py
+│   └── test_phase3.py           # Phase 3 & 3.1 Hardening test suite
 ├── requirements.txt
 ├── .env.example
 ├── .gitignore
@@ -354,20 +463,18 @@ recovery-governor/
 
 ---
 
-## 13. Known Limitations & Roadmap
+## 14. Known Limitations & Technical Disclosures
 
-### Limitations
-1. **Network settlement delay**: In production, banking clearing cycles (NACH/e-Mandate) take up to 24-48 hours. In the prototype, these settlement windows are simulated or accelerated.
-2. **Multi-currency**: Currently calibrated for INR (`₹`) transactions and Indian payment methods (UPI, Rupay/Visa/Mastercard, e-Mandates, Netbanking).
-3. **Real Customer PII**: The dataset is 100% synthetic for privacy and PCI-DSS safety.
-
-### Roadmap
-- Reinforcement Learning with Human Feedback (RLHF) for high-ticket human escalation triage.
-- Cross-merchant shared issuer health telemetry (detecting bank switch downtime before retries occur).
-- Dynamic payment rail failover (e.g. auto-switching from HDFC UPI handle to ICICI handle during NPCI switch degradation).
+### Technical Disclosures
+1. **Simulated Network Health**: Telemetry values (e.g. SBI health = 43.0) are scenario-driven simulation presets for benchmark stress testing, NOT live production feeds. In production, this engine would ingest verified PSP status webhooks.
+2. **Proposed Merchant SDK Integration**: Actions like `RECOMMEND_ALTERNATE_PAYMENT_PATH` provide client-side payment routing recommendations to the checkout UI, rather than internal Razorpay production rail overrides.
+3. **Conservative Prevention Attribution**: When causal evidence is insufficient to verify that an intervention altered the outcome, the system conservatively records `UNKNOWN_PREVENTION` rather than overstating lift.
+4. **Parameterization**: Currently parameterized for INR (`₹`) transactions and Indian payment methods (UPI, Cards, e-Mandates, Netbanking).
+5. **Real Customer PII**: The dataset is 100% synthetic for privacy and PCI-DSS compliance.
 
 ---
 
-## 14. License
+## 15. License
 Independent Prototype built for the **Razorpay AI Buildathon 2026 Track 03: AI Revenue Recovery**.
 Not an official Razorpay product. Released under the Apache 2.0 License.
+

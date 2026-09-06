@@ -18,6 +18,10 @@ from app.api.routes_chaos import router as chaos_router
 from app.api.routes_audit import router as audit_router
 from app.api.routes_demo import router as demo_router
 from app.api.routes_sandbox import router as sandbox_router
+from app.api.routes_prediction import router as prediction_router
+from app.api.routes_network import router as network_router
+from app.api.routes_lifecycle import router as lifecycle_router
+from app.api.routes_merchant_policy import router as merchant_policy_router
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -56,6 +60,10 @@ app.include_router(chaos_router)
 app.include_router(audit_router)
 app.include_router(demo_router)
 app.include_router(sandbox_router)
+app.include_router(prediction_router)
+app.include_router(network_router)
+app.include_router(lifecycle_router)
+app.include_router(merchant_policy_router)
 
 # Health endpoints
 @app.get("/health")

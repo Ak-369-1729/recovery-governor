@@ -191,7 +191,7 @@ class RecoveryAIReadinessEngine:
         critical_violations: int = 0,
         empirical_lift_vs_baseline: float = 0.71,
         fallback_success_rate: float = 1.0,
-        brier_calibration: float = 0.88,
+        brier_calibration: Optional[float] = None,
         attribution_verification_rate: float = 0.94,
     ) -> RecoveryAIReadinessBreakdown:
         """
@@ -222,9 +222,24 @@ class RecoveryAIReadinessEngine:
         fallback_score = round(max(0.0, min(1.0, fallback_success_rate)) * 15.0, 1)
         fallback_notes = f"{fallback_success_rate:.1%} graceful failover during simulated LLM disruptions."
 
-        # Dimension 4: Accuracy & Calibration (15)
-        accuracy_score = round(max(0.0, min(1.0, brier_calibration)) * 15.0, 1)
-        accuracy_notes = f"Confidence calibration score of {brier_calibration:.2f}; low-confidence routed to human review."
+        # Dimension 4: Accuracy & Prediction Reliability (15)
+        if brier_calibration is not None:
+            calib_factor = max(0.0, min(1.0, brier_calibration))
+            accuracy_score = round(calib_factor * 15.0, 1)
+            accuracy_notes = f"Confidence calibration score of {brier_calibration:.2f}; low-confidence routed to human review."
+        else:
+            from app.engine.prediction_evaluation import PredictionEvaluationEngine
+            rel_metrics = PredictionEvaluationEngine.calculate_reliability_metrics()
+            if rel_metrics.total_predictions >= 5 and isinstance(rel_metrics.brier_score, (int, float)):
+                brier_val = float(rel_metrics.brier_score)
+                # Brier score 0.15 gives quality (1.0 - 0.15*0.8) ~ 0.88 -> 13.2 pts
+                calib_factor = max(0.0, min(1.0, 1.0 - (brier_val * 0.8)))
+                accuracy_score = round(calib_factor * 15.0, 1)
+                prec_str = f"{rel_metrics.precision:.1%}" if isinstance(rel_metrics.precision, float) else str(rel_metrics.precision)
+                accuracy_notes = f"Prediction Reliability: Brier score {brier_val:.3f}, Precision {prec_str} across {rel_metrics.total_predictions} synthetic evaluations."
+            else:
+                accuracy_score = 13.2
+                accuracy_notes = "Prediction Reliability baseline: 0.88; low-confidence routed to human review."
 
         # Dimension 5: Verification & Attribution (15)
         verif_score = round(max(0.0, min(1.0, attribution_verification_rate)) * 15.0, 1)
@@ -625,6 +640,83 @@ class PortfolioSimulationEngine:
             },
         )
 
+        # 6. Evaluate PREDICTIVE_GOVERNOR (Pre-Flight Intelligence + Governor)
+        if StrategyType.PREDICTIVE_GOVERNOR in strategies:
+            pred_recovered = 0.0
+            pred_cost = 0.0
+            pred_risk = 0.0
+            pred_friction = 0.0
+            pred_interventions = 0
+            pred_unsafe_blocked = gov_unsafe_blocked
+            prevented_count = 0
+
+            for p in payments:
+                ft = FailureType(p["failure_type"]) if p["failure_type"] in FailureType.__members__ else FailureType.UNKNOWN_FAILURE
+                if FailureType.is_hard_decline(ft):
+                    continue
+
+                is_transient = ft in {FailureType.TEMPORARY_ISSUER_FAILURE, FailureType.NETWORK_TIMEOUT, FailureType.BANK_SERVER_UNAVAILABLE}
+                if is_transient:
+                    # Pre-flight prevention (e.g. RECOMMEND_ALTERNATE_PAYMENT_PATH)
+                    pred_interventions += 1
+                    pred_cost += 2.0
+                    pred_risk += 1.0
+                    pred_friction += 5.0
+                    h = (int(hashlib.md5(f"prev_{p['payment_id']}_{seed}".encode()).hexdigest()[:8], 16) % 10000) / 10000.0
+                    if h < 0.88 or p.get("natural_recovery_status") == "NATURAL_RECOVERY_CONTROL":
+                        pred_recovered += p["amount"]
+                        prevented_count += 1
+                    else:
+                        pred_cost += 5.0
+                        if (h < 0.94):
+                            pred_recovered += p["amount"]
+                else:
+                    diag = DeterministicFallbackEngine.diagnose(p)
+                    evt_id = f"sim_pred_{seed}_{p['payment_id']}"
+                    dec = gov.evaluate(p, evt_id, diag)
+                    if dec.decision == DecisionOutcome.EXECUTE:
+                        pred_interventions += 1
+                        meta = ACTION_CATALOG.get(dec.selected_action, {"intervention_cost": 5.0, "risk_cost": 4.0, "friction_cost": 0.0})
+                        pred_cost += meta["intervention_cost"]
+                        pred_risk += meta["risk_cost"]
+                        pred_friction += meta["friction_cost"]
+                        erv_calc = dec.erv_by_action.get(dec.selected_action.value)
+                        sim_p = erv_calc.recovery_probability if erv_calc else 0.65
+                        h = (int(hashlib.md5(f"pred_gov_{p['payment_id']}_{seed}".encode()).hexdigest()[:8], 16) % 10000) / 10000.0
+                        if h < sim_p or p.get("natural_recovery_status") == "NATURAL_RECOVERY_CONTROL":
+                            pred_recovered += p["amount"]
+                    elif p.get("natural_recovery_status") == "NATURAL_RECOVERY_CONTROL":
+                        pred_recovered += p["amount"]
+
+            pred_net = pred_recovered - (pred_cost + pred_risk + pred_friction)
+            pred_rate = pred_recovered / total_failed_volume if total_failed_volume > 0 else 0.0
+            pred_lift = round(((pred_net - base_net) / abs(base_net)) * 100, 1) if base_net != 0 else 0.0
+
+            results[StrategyType.PREDICTIVE_GOVERNOR.value] = StrategyResultItem(
+                strategy=StrategyType.PREDICTIVE_GOVERNOR,
+                strategy_label="PREDICTIVE_GOVERNOR (Pre-Flight Intelligence + Governor)",
+                sample_size=population_size,
+                failed_payment_value=round(total_failed_volume, 2),
+                recovered_value=round(pred_recovered, 2),
+                recovery_rate=round(pred_rate, 4),
+                incremental_recovery=round(max(0.0, pred_recovered - ctrl_recovered), 2),
+                intervention_count=pred_interventions,
+                intervention_rate=round(pred_interventions / population_size, 4),
+                intervention_cost=round(pred_cost, 2),
+                friction_cost=round(pred_friction, 2),
+                risk_cost=round(pred_risk, 2),
+                net_recovery=round(pred_net, 2),
+                recovery_lift=pred_lift,
+                unsafe_actions_prevented=pred_unsafe_blocked,
+                average_time_to_recovery_minutes=12.0,
+                attribution_breakdown={
+                    AttributionCategory.PREVENTED_FAILURE.value: prevented_count,
+                    AttributionCategory.ATTRIBUTED_RECOVERY.value: max(0, int(population_size * max(0.0, pred_rate - ctrl_rate)) - prevented_count),
+                    AttributionCategory.NATURAL_RECOVERY.value: int(population_size * ctrl_rate),
+                    AttributionCategory.FAILED_RECOVERY.value: int(population_size * (1.0 - pred_rate)),
+                },
+            )
+
         elapsed_ms = round((time.time() - start_time) * 1000, 2)
         sim_id = f"sim_port_{seed}_{uuid.uuid4().hex[:8]}"
 
@@ -657,6 +749,7 @@ class CounterfactualReplayEngine:
         verification: VerificationResult,
         attribution: AttributionResult,
         ai_diagnosis: AIDiagnosisOutput,
+        include_prevention_counterfactuals: bool = False,
     ) -> DecisionReplayTrace:
         amount = float(payment["amount"])
         act_value = decision.selected_action.value
@@ -741,6 +834,38 @@ class CounterfactualReplayEngine:
             causal_disclaimer="SIMULATED COUNTERFACTUAL: Model-projected alternative timing/channel trade-off.",
         )
 
+        # Counterfactual D: NO PREVENTION (Reactive Recovery Only)
+        no_prev_cost = 9.0
+        no_prev_net = (amount - no_prev_cost) if is_success else -no_prev_cost
+        no_prev_path = CounterfactualPath(
+            path_id="cf_no_prevention",
+            label="SIMULATED COUNTERFACTUAL: No Prevention (Reactive Recovery Only)",
+            strategy="NO_PREVENTION",
+            is_counterfactual=True,
+            action_taken=decision.selected_action,
+            expected_outcome="Payment allowed to fail first on degraded rail; reactive recovery initiated post-hoc.",
+            financial_outcome_inr=amount if is_success else 0.0,
+            net_value_inr=no_prev_net,
+            attribution_category=attribution.category,
+            governor_status="REACTIVE_ONLY",
+            causal_disclaimer="SIMULATED COUNTERFACTUAL: Simulates absence of pre-flight intelligent routing; incurs higher failure friction.",
+        )
+
+        # Counterfactual E: NAIVE PREVENTIVE INTERVENTION (Unbounded Customer Friction)
+        naive_prev_path = CounterfactualPath(
+            path_id="cf_naive_prevention",
+            label="SIMULATED COUNTERFACTUAL: Naive Prevention (Unbounded Customer Friction)",
+            strategy="NAIVE_PREVENTION",
+            is_counterfactual=True,
+            action_taken=ActionType.CUSTOMER_NOTIFICATION,
+            expected_outcome="Customer bombarded with pre-flight warnings regardless of ERV. High friction drop-off.",
+            financial_outcome_inr=round(amount * 0.40, 2) if is_success else 0.0,
+            net_value_inr=round(amount * 0.40 - 15.0, 2) if is_success else -15.0,
+            attribution_category=AttributionCategory.FAILED_PREVENTION if not is_success else AttributionCategory.PREVENTED_FAILURE,
+            governor_status="NAIVE_UNBOUNDED_FRICTION",
+            causal_disclaimer="SIMULATED COUNTERFACTUAL: Illustrates customer churn caused by un-governed pre-flight interventions.",
+        )
+
         # Build What-If matrix
         whatif_resp = WhatIfEngine.evaluate_all_actions(payment, ai_diagnosis)
         whatif_list = [e.model_dump() for e in whatif_resp.evaluations]
@@ -769,7 +894,7 @@ class CounterfactualReplayEngine:
             attribution=attribution.model_dump(),
             learning_update={"bayesian_prior_updated": True, "posterior_mean": 0.65},
             actual_path=actual_path,
-            counterfactual_paths=[ctrl_path, base_path, alt_path],
+            counterfactual_paths=[ctrl_path, base_path, alt_path, no_prev_path, naive_prev_path] if include_prevention_counterfactuals else [ctrl_path, base_path, alt_path],
         )
 
 

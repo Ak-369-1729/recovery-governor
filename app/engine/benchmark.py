@@ -35,6 +35,8 @@ class BenchmarkEngine:
         payments = list_payments(limit=sample_size, offset=0)
         actual_size = len(payments)
         
+        now_run_id = f"bench_{uuid.uuid4().hex[:12]}"
+        
         # 1. Run CONTROL Cohort (No intervention: natural recovery only)
         control_metrics = cls._evaluate_control(payments)
         
@@ -42,13 +44,12 @@ class BenchmarkEngine:
         baseline_metrics = cls._evaluate_baseline(payments, control_metrics["natural_recovery"])
         
         # 3. Run GOVERNOR Cohort (Intelligent ERV + Deterministic 8-gate policy)
-        governor_metrics = cls._evaluate_governor(payments, control_metrics["natural_recovery"])
+        governor_metrics = cls._evaluate_governor(payments, control_metrics["natural_recovery"], run_id=now_run_id)
         governor_metrics["incremental_recovery_vs_baseline"] = round(
             max(0.0, governor_metrics["gross_recovered"] - baseline_metrics["gross_recovered"]), 2
         )
 
         # Package results into Pydantic models
-        now_run_id = f"bench_{uuid.uuid4().hex[:12]}"
         
         res: Dict[str, BenchmarkMetrics] = {
             BenchmarkCohort.CONTROL.value: BenchmarkMetrics(
@@ -177,7 +178,7 @@ class BenchmarkEngine:
         }
 
     @classmethod
-    def _evaluate_governor(cls, payments: List[Dict[str, Any]], control_natural_recovery: float) -> Dict[str, Any]:
+    def _evaluate_governor(cls, payments: List[Dict[str, Any]], control_natural_recovery: float, run_id: Optional[str] = None) -> Dict[str, Any]:
         gross_failed = sum(p["amount"] for p in payments)
         gross_recovered = 0.0
         interventions = 0
@@ -197,7 +198,7 @@ class BenchmarkEngine:
             diagnosis = DeterministicFallbackEngine.diagnose(p)
             
             # Step 2: Governor deterministic evaluation
-            event_id = p.get("event_id") or f"evt_{p['payment_id']}"
+            event_id = f"{run_id}_{p['payment_id']}" if run_id else (p.get("event_id") or f"evt_{p['payment_id']}")
             decision = governor.evaluate(
                 payment=p,
                 event_id=event_id,

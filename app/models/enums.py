@@ -34,6 +34,10 @@ class ActionType(str, Enum):
     HUMAN_ESCALATION = "HUMAN_ESCALATION"
     NO_ACTION = "NO_ACTION"
     STOP = "STOP"
+    # Phase 3: Preventive & Intelligent Routing Actions
+    RECOMMEND_ALTERNATE_PAYMENT_PATH = "RECOMMEND_ALTERNATE_PAYMENT_PATH"
+    DELAY_ATTEMPT = "DELAY_ATTEMPT"
+    CUSTOMER_NOTIFICATION = "CUSTOMER_NOTIFICATION"
 
     @classmethod
     def is_retry(cls, action: "ActionType") -> bool:
@@ -45,11 +49,23 @@ class ActionType(str, Enum):
         }
 
     @classmethod
+    def is_preventive(cls, action: "ActionType") -> bool:
+        return action in {
+            cls.RECOMMEND_ALTERNATE_PAYMENT_PATH,
+            cls.DELAY_ATTEMPT,
+            cls.CUSTOMER_NOTIFICATION,
+            cls.SEND_PAYMENT_LINK,
+            cls.NO_ACTION,
+        }
+
+    @classmethod
     def requires_customer_contact(cls, action: "ActionType") -> bool:
         return action in {
             cls.SEND_PAYMENT_LINK,
             cls.SEND_REMINDER,
             cls.REQUEST_CUSTOMER_ACTION,
+            cls.CUSTOMER_NOTIFICATION,
+            cls.RECOMMEND_ALTERNATE_PAYMENT_PATH,
         }
 
 class PaymentMethod(str, Enum):
@@ -103,6 +119,11 @@ class AttributionCategory(str, Enum):
     NATURAL_RECOVERY = "NATURAL_RECOVERY"
     UNKNOWN = "UNKNOWN"
     FAILED_RECOVERY = "FAILED_RECOVERY"
+    # Phase 3: Prevention Attribution Categories
+    PREVENTED_FAILURE = "PREVENTED_FAILURE"
+    NATURAL_SUCCESS = "NATURAL_SUCCESS"
+    FAILED_PREVENTION = "FAILED_PREVENTION"
+    UNKNOWN_PREVENTION = "UNKNOWN_PREVENTION"
 
 class BenchmarkCohort(str, Enum):
     CONTROL = "CONTROL"
@@ -118,6 +139,7 @@ ACTION_CATALOG: Dict[ActionType, Dict[str, Any]] = {
         "friction_cost": 0.0,         # Zero customer friction (invisible retry)
         "requires_customer_action": False,
         "requires_human_approval": False,
+        "is_preventive": False,
         "description": "Immediate automated retry via original payment rail",
     },
     ActionType.RETRY_30_MIN: {
@@ -127,6 +149,7 @@ ACTION_CATALOG: Dict[ActionType, Dict[str, Any]] = {
         "friction_cost": 0.0,
         "requires_customer_action": False,
         "requires_human_approval": False,
+        "is_preventive": False,
         "description": "Scheduled retry after 30-minute issuer recovery window",
     },
     ActionType.RETRY_2_HOURS: {
@@ -136,6 +159,7 @@ ACTION_CATALOG: Dict[ActionType, Dict[str, Any]] = {
         "friction_cost": 0.0,
         "requires_customer_action": False,
         "requires_human_approval": False,
+        "is_preventive": False,
         "description": "Scheduled retry after 2-hour banking clearing window",
     },
     ActionType.RETRY_NEXT_DAY: {
@@ -145,6 +169,7 @@ ACTION_CATALOG: Dict[ActionType, Dict[str, Any]] = {
         "friction_cost": 0.0,
         "requires_customer_action": False,
         "requires_human_approval": False,
+        "is_preventive": False,
         "description": "Scheduled retry next business morning (e.g. balance top-up / salary cycle)",
     },
     ActionType.SEND_PAYMENT_LINK: {
@@ -154,6 +179,7 @@ ACTION_CATALOG: Dict[ActionType, Dict[str, Any]] = {
         "friction_cost": 25.0,        # Moderate customer friction (requires manual action)
         "requires_customer_action": True,
         "requires_human_approval": False,
+        "is_preventive": True,
         "description": "Generate multi-rail dynamic payment link sent to customer",
     },
     ActionType.SEND_REMINDER: {
@@ -163,6 +189,7 @@ ACTION_CATALOG: Dict[ActionType, Dict[str, Any]] = {
         "friction_cost": 15.0,
         "requires_customer_action": True,
         "requires_human_approval": False,
+        "is_preventive": False,
         "description": "Gentle SMS / Push reminder for pending invoice",
     },
     ActionType.REQUEST_CUSTOMER_ACTION: {
@@ -172,6 +199,7 @@ ACTION_CATALOG: Dict[ActionType, Dict[str, Any]] = {
         "friction_cost": 35.0,        # Higher friction (requesting mandate re-authorization or new card)
         "requires_customer_action": True,
         "requires_human_approval": False,
+        "is_preventive": False,
         "description": "Request customer update payment method or re-authorize mandate",
     },
     ActionType.HUMAN_ESCALATION: {
@@ -181,6 +209,7 @@ ACTION_CATALOG: Dict[ActionType, Dict[str, Any]] = {
         "friction_cost": 10.0,
         "requires_customer_action": False,
         "requires_human_approval": True,
+        "is_preventive": False,
         "description": "Escalate to high-value manual recovery & account manager review",
     },
     ActionType.NO_ACTION: {
@@ -190,6 +219,7 @@ ACTION_CATALOG: Dict[ActionType, Dict[str, Any]] = {
         "friction_cost": 0.0,
         "requires_customer_action": False,
         "requires_human_approval": False,
+        "is_preventive": True,
         "description": "Do not intervene. Allow natural recovery or avoid negative ERV",
     },
     ActionType.STOP: {
@@ -199,7 +229,39 @@ ACTION_CATALOG: Dict[ActionType, Dict[str, Any]] = {
         "friction_cost": 0.0,
         "requires_customer_action": False,
         "requires_human_approval": False,
+        "is_preventive": False,
         "description": "Permanently cease recovery attempts (hard decline or caps exhausted)",
+    },
+    # Phase 3 Preventive Actions
+    ActionType.RECOMMEND_ALTERNATE_PAYMENT_PATH: {
+        "delay_minutes": 0,
+        "intervention_cost": 2.0,     # Pre-checkout recommendation routing overhead
+        "risk_cost": 1.0,             # Negligible risk penalty
+        "friction_cost": 5.0,         # Low friction prompt to switch to a higher health rail
+        "requires_customer_action": True,
+        "requires_human_approval": False,
+        "is_preventive": True,
+        "description": "Proactively recommend higher-reliability payment rail or handle before execution",
+    },
+    ActionType.DELAY_ATTEMPT: {
+        "delay_minutes": 15,
+        "intervention_cost": 0.0,     # Internal queue deferral
+        "risk_cost": 2.0,             # Mild latency risk
+        "friction_cost": 0.0,         # Zero friction for async mandate/recurrent charges
+        "requires_customer_action": False,
+        "requires_human_approval": False,
+        "is_preventive": True,
+        "description": "Delay dispatch until downstream issuer rail transient spike clears",
+    },
+    ActionType.CUSTOMER_NOTIFICATION: {
+        "delay_minutes": 0,
+        "intervention_cost": 2.0,     # Notification SMS / push fee
+        "risk_cost": 1.0,
+        "friction_cost": 10.0,        # Mild customer friction
+        "requires_customer_action": True,
+        "requires_human_approval": False,
+        "is_preventive": True,
+        "description": "Pre-flight push advisory on issuer degradation or suggested backup method",
     },
 }
 
@@ -221,6 +283,7 @@ class StrategyType(str, Enum):
     FIXED_DELAY_2H = "FIXED_DELAY_2H"
     ADAPTIVE = "ADAPTIVE"
     GOVERNOR = "GOVERNOR"
+    PREDICTIVE_GOVERNOR = "PREDICTIVE_GOVERNOR"
 
 class ChaosType(str, Enum):
     PROHIBITED_RETRY = "PROHIBITED_RETRY"
@@ -231,3 +294,49 @@ class ChaosType(str, Enum):
     EXECUTOR_FAILURE = "EXECUTOR_FAILURE"
     GATEWAY_UNAVAILABLE = "GATEWAY_UNAVAILABLE"
     RETRY_STORM = "RETRY_STORM"
+    # Phase 3 Chaos Types
+    PREDICTOR_UNAVAILABLE = "PREDICTOR_UNAVAILABLE"
+    PREDICTOR_TIMEOUT = "PREDICTOR_TIMEOUT"
+    MALFORMED_PREDICTION = "MALFORMED_PREDICTION"
+    LOW_CONFIDENCE_PREDICTION = "LOW_CONFIDENCE_PREDICTION"
+    NETWORK_HEALTH_UNAVAILABLE = "NETWORK_HEALTH_UNAVAILABLE"
+    STALE_NETWORK_HEALTH = "STALE_NETWORK_HEALTH"
+    CONTRADICTORY_PREDICTION = "CONTRADICTORY_PREDICTION"
+    EXTREME_PAYMENT_AMOUNT = "EXTREME_PAYMENT_AMOUNT"
+    KILL_SWITCH_PREVENTIVE = "KILL_SWITCH_PREVENTIVE"
+
+class LifecycleState(str, Enum):
+    INTENT_CREATED = "INTENT_CREATED"
+    PRE_FLIGHT_ANALYSIS = "PRE_FLIGHT_ANALYSIS"
+    FAILURE_PREDICTED = "FAILURE_PREDICTED"
+    PREVENTION_EVALUATION = "PREVENTION_EVALUATION"
+    PREVENTIVE_ACTION_APPROVED = "PREVENTIVE_ACTION_APPROVED"
+    PREVENTIVE_ACTION_REJECTED = "PREVENTIVE_ACTION_REJECTED"
+    PREVENTIVE_ACTION_EXECUTED = "PREVENTIVE_ACTION_EXECUTED"
+    ATTEMPT_DISPATCHED = "ATTEMPT_DISPATCHED"
+    PAYMENT_SUCCEEDED = "PAYMENT_SUCCEEDED"
+    PAYMENT_FAILED = "PAYMENT_FAILED"
+    RECOVERY_GOVERNOR_ACTIVATED = "RECOVERY_GOVERNOR_ACTIVATED"
+    RECOVERY_ACTION_EXECUTED = "RECOVERY_ACTION_EXECUTED"
+    VERIFIED_AND_ATTRIBUTED = "VERIFIED_AND_ATTRIBUTED"
+    COMPLETED = "COMPLETED"
+
+class NetworkScenario(str, Enum):
+    NORMAL = "NORMAL"
+    SBI_DEGRADED = "SBI_DEGRADED"
+    ICICI_DEGRADED = "ICICI_DEGRADED"
+    MULTI_RAIL_DEGRADATION = "MULTI_RAIL_DEGRADATION"
+    UPI_OUTAGE = "UPI_OUTAGE"
+    CARD_DEGRADATION = "CARD_DEGRADATION"
+    RECOVERY = "RECOVERY"
+
+class PredictionConfidence(str, Enum):
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+class PredictionClassification(str, Enum):
+    TRUE_POSITIVE = "TRUE_POSITIVE"
+    TRUE_NEGATIVE = "TRUE_NEGATIVE"
+    FALSE_POSITIVE = "FALSE_POSITIVE"
+    FALSE_NEGATIVE = "FALSE_NEGATIVE"
