@@ -860,3 +860,326 @@ tbody tr:hover {
   background: var(--color-success);
   border-radius: 3px;
 }
+
+/* ========================================================================== */
+/* PHASE 4: JUDGE-FIRST UI & HERO PAYMENT INTELLIGENCE STYLES                 */
+/* ========================================================================== */
+
+/* Language System Badges */
+.badge-observed {
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.5);
+  color: #67e8f9;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-simulated {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fcd34d;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-proposed {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: #cbd5e1;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Kill Switch Status Bar */
+.intel-kill-switch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  font-size: 0.8rem;
+  transition: all 0.25s ease;
+}
+.intel-kill-switch-bar.ready {
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--text-secondary);
+}
+.intel-kill-switch-bar.active {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--color-danger);
+  color: #fca5a5;
+  animation: pulse-danger 2s infinite ease-in-out;
+}
+@keyframes pulse-danger {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* 6-Stage Horizontal Lifecycle Pipeline */
+.lifecycle-horizontal-bar {
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  margin-bottom: 20px;
+  gap: 4px;
+  overflow-x: auto;
+}
+.lh-step {
+  flex: 1;
+  min-width: 130px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.lh-step.active {
+  background: rgba(12, 108, 242, 0.12);
+  border-color: var(--accent-blue);
+}
+.lh-step.completed {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+.lh-step.blocked {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+.lh-step-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.lh-step-num {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+}
+.lh-step.active .lh-step-num {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: rgba(12, 108, 242, 0.2);
+}
+.lh-step.completed .lh-step-num {
+  border-color: var(--color-success);
+  color: var(--color-success);
+  background: rgba(16, 185, 129, 0.2);
+}
+.lh-step-name {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+}
+.lh-step-sub {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lh-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 0 4px;
+}
+
+/* Demo Scenarios Quick Chips */
+.scenario-presets-container {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.scenario-preset-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+.scenario-preset-btn:hover {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+  background: rgba(12, 108, 242, 0.08);
+}
+.scenario-preset-btn.active {
+  border-color: var(--accent-blue);
+  background: rgba(12, 108, 242, 0.16);
+  color: #93c5fd;
+  box-shadow: 0 0 10px rgba(12, 108, 242, 0.25);
+}
+
+/* Hero Decision Split Card */
+.hero-decision-card {
+  background: linear-gradient(135deg, rgba(21, 29, 48, 0.95), rgba(17, 23, 38, 0.98));
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+}
+.hero-decision-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #8b5cf6, #0c6cf2, #10b981);
+}
+.hero-decision-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1.4fr;
+  gap: 20px;
+  align-items: stretch;
+}
+@media (max-width: 1024px) {
+  .hero-decision-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.hero-decision-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  padding: 0 8px;
+}
+.hero-column {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.hero-column.proposal {
+  border-left: 3px solid var(--color-purple);
+}
+.hero-column.decision {
+  border-left: 3px solid var(--color-success);
+}
+.hero-column.decision.blocked {
+  border-left: 3px solid var(--color-danger);
+}
+
+/* Compact Telemetry Rows */
+.compact-telemetry-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+}
+.compact-telemetry-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Expandable Drawer Button */
+.collapsible-toggle-btn {
+  background: transparent;
+  border: 1px dashed var(--border-color);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+.collapsible-toggle-btn:hover {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+  background: rgba(12, 108, 242, 0.06);
+}
+
+/* Collapsible Panel */
+.collapsible-panel {
+  display: none;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+  animation: fadeIn 0.2s ease;
+}
+.collapsible-panel.open {
+  display: block;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive 1366x768 optimization */
+@media (max-width: 1400px) {
+  .hero-decision-card {
+    padding: 16px;
+  }
+  .lh-step {
+    min-width: 110px;
+    padding: 6px 8px;
+  }
+}
+
